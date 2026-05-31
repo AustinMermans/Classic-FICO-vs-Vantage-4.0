@@ -1,57 +1,77 @@
 # Classic FICO vs. VantageScore 4.0 — a loan-level default-prediction bake-off
 
-*Which mortgage credit score actually predicts default better, on the same loans — and are they substitutable?*
+*On 24.7M Fannie Mae mortgages with both scores attached, which one actually predicts default better — and for whom?*
 
-> ⚠️ **Scope — read this first.** This study compares **modern VantageScore 4.0** against **Classic (legacy) FICO** — **not FICO Score 10T.** Classic FICO is the only FICO score in the public GSE loan-performance data today. The like-for-like **FICO 10T vs VantageScore 4.0** comparison requires the FICO 10T historical data the GSEs have announced for **summer 2026** (not yet released). Until that drops, every result here is **VantageScore 4.0 (current method) vs Classic FICO.**
-
-> **Status:** Full panel complete — **2013Q2–2023Q1, 24.7M loans, 99.98% join**. Results below. (Classic FICO vs VantageScore 4.0; see scope caveat above.)
+> ⚠️ **Scope — read this first.** This compares **modern VantageScore 4.0** against **Classic (legacy) FICO** — **not FICO Score 10T.** Classic FICO is the only FICO in the public GSE loan-performance data today. The like-for-like **FICO 10T vs VantageScore 4.0** comparison needs the FICO 10T historical data the GSEs have announced for **Summer 2026** (not yet released). Every result here is **VantageScore 4.0 (current/lowest method) vs Classic FICO**, on **Fannie-acquired** loans only.
 
 ## Abstract
-- Head-to-head test of **Classic FICO** vs **VantageScore 4.0** as default predictors on the *same* Fannie Mae mortgages, using the first public loan-level VantageScore data (released 2024).
-- Goal: turn the long-running "FICO vs VantageScore" debate from an argument into a measurement — discrimination, agreement, and marginal-borrower behavior.
-- Motivated by the GSEs' move to accept VantageScore 4.0 / FICO 10T, which puts FICO's decades-long sole-score position (and pricing power) in play.
+- Head-to-head test of **Classic FICO** vs **VantageScore 4.0** as default predictors on the *same* Fannie Mae mortgages, using the first public loan-level VantageScore data (released July 2024).
+- **VantageScore wins on average, but the average hides the story.** Pooled Gini edge is +148bp (0.492 vs 0.478); weighting by where defaults actually occur, it is **+100bp**, and it splits sharply by regime and by borrower count.
+- **The edge is regime-conditional:** ~**+294bp in benign vintages**, ~**+2bp (zero) in the high-default cohorts** — and those cohorts are the ones whose defaults landed in the **2020–21 COVID shock**, so this is evidence about one correlated macro event, not a general "stress" law.
+- **The edge is almost entirely single-borrower loans:** **+198bp on 1-borrower loans, +2bp on 2-borrower loans** (where the scores are tied and both much stronger).
+- When the two disagree, the outcome tracks VantageScore *modestly* more than FICO (residual Gini 0.242 vs 0.218).
+- **Bottom line:** VantageScore 4.0 is a real, often-better substitute for Classic FICO in normal conditions and on single-borrower loans — and no better under the COVID shock or on co-borrower loans. Directionally relevant to the credit-score-competition debate; it does **not** settle pricing-power or FICO-10T questions.
 
-## Introduction
-- FHFA validated FICO 10T and VantageScore 4.0 for the GSEs (2022); adoption is phased — VantageScore 4.0 is in (limited) rollout, while FICO 10T is approved with historical 10T scores expected Summer 2026. A substitute score is only adoptable if it underwrites at least as well.
-- The 2024 public release of loan-level VantageScore 4.0 scores (joinable to the existing loan-performance data) makes an independent, outcome-based comparison possible for the first time.
-- Question this repo answers: **is VantageScore 4.0 a genuine substitute for Classic FICO in mortgage credit risk, and for which borrowers do they disagree?**
+## 1. Introduction
+- FHFA validated FICO 10T and VantageScore 4.0 for the GSEs (Oct 2022); adoption is **phased** — VantageScore 4.0 is in a limited approved-lender rollout (2026), while FICO 10T is approved with historical 10T scores expected **Summer 2026**. A substitute score is only adoptable if it underwrites at least as well.
+- The **July 2024** public release of loan-level VantageScore 4.0 (joinable to the existing loan-performance data) makes an independent, outcome-based comparison possible for the first time.
+- Question: **on Fannie-acquired mortgages, is VantageScore 4.0 a genuine substitute for Classic FICO in default discrimination, and for which loans do they diverge?**
 
-## Data
-- Fannie Mae **Single-Family Loan Performance** dataset (origination attributes + monthly performance) joined to the **VantageScore 4.0 Historical Scores** file.
-- Acquisition quarters **2013Q2–2023Q1** (the VantageScore-overlap window); ~25M loans in the score file; loan-level join on `loan_identifier + acquisition_quarter`.
-- Each loan carries **both** scores (Classic FICO + VantageScore 4.0) and a realized default outcome. Public, anonymized, free (registration required).
+## 2. Data
+- Fannie Mae **Single-Family Loan Performance** dataset (origination attributes + monthly performance) joined to the public **VantageScore 4.0 Historical Scores** file on `loan_identifier + acquisition_quarter`. Acquisition quarters **2013Q2–2023Q1** (the VantageScore-overlap window).
+- **Full joined panel: 25,087,678 loans, 99.98% score-match** (25,081,784 matched). 11,767 rows (0.05%) are missing **at least one** score (3,480 missing both).
+- **Headline analysis sample: 24,702,585 loans** — those with **both** scores, a resolved 36-month outcome, and ≤2 borrowers (see §3). Public, anonymized, free (registration required).
 
-## Methods
-- **Default** = ever-180-days-delinquent or credit-event termination within a 36-month window from origination; voluntary prepayment treated as a competing risk (known non-default), not censoring.
-- **Comparator scores:** VantageScore `vs4_current_method` vs the Classic FICO **loan representative score** = min(borrower, co-borrower), matching the lowest-of-borrowers methodology.
-- **Discrimination:** AUC / Gini / KS, overall and **per vintage** (stress-vintage robustness). Immature (unresolved) loans excluded; results are **conditional on GSE acquisition** (FICO floored ~620), not unconditional.
-- **Agreement & marginal analysis:** rank correlation, score-band transition matrix, and a **matched-approval-rate** swing-borrower test (who each score uniquely approves, and how those loans perform).
+## 3. Methods
+- **Default** = ever-180-days-delinquent OR a credit-event zero-balance code (`02/03/09/15`) within a 36-month window from origination; **voluntary prepayment is treated as a known non-default** (we report a binary "default within window" label, not a formal competing-risks model — see Limitations).
+- **Comparator scores.** VantageScore **`vs4_current_method`** (lowest-of-borrowers) vs the Classic FICO **loan representative score = min(borrower, co-borrower)** — both lowest-method, so they are **apples-to-apples**. VantageScore's *average*-method variants score +337–390bp, but that is a methodology mismatch against lowest-method FICO, not a larger true edge (§4.6).
+- **Discrimination:** AUC / Gini / KS. We report **pooled, within-vintage (loan- and default-weighted), and by-regime** figures, because pooled numbers mix vintages of very different base rates.
+- **Conditioning & exclusions.** Results are conditional on **Fannie acquisition** (the headline sample sits overwhelmingly above the historical ~620 acquisition floor; 5,957 of its loans are below it). Immature loans (observed <36 months, no event, not prepaid) are excluded; prepaid loans are kept as known non-defaults. Loans with >2 borrowers are excluded from the headline because the Classic FICO comparator only carries borrower + co-borrower.
 
-## Results
-*(24.7M loans, resolved & ≤2-borrower, conditional on GSE acquisition / FICO ≥ 620; default = D180+ or credit event within 36 months)*
+## 4. Results
+*(headline sample: 24.7M resolved, ≤2-borrower, both-score, Fannie-acquired loans. Overall AUC: FICO 0.739, VS 0.746; KS 0.363 vs 0.368; Gini 0.478 vs 0.492.)*
 
-- **Overall, VantageScore 4.0 edges Classic FICO** on every discrimination metric: **Gini 0.492 vs 0.478 (+148 bp)**, AUC 0.746 vs 0.739, KS 0.368 vs 0.363.
+### 4.1 The average wins for VantageScore, but it is regime-conditional
+Pooled Gini edge **+148bp**; within-vintage **+210bp loan-weighted**, **+100bp default-weighted**. The split: **+294bp in benign vintages (default <1%) vs +2bp in stress vintages (default >2.5%)**. The edge concentrates where defaults are rare and collapses where they are common.
 
-  ![Discrimination](figures/discrimination_bars.png)
+![Gini by vintage](figures/gini_by_vintage.png)
 
-- **But the edge is vintage-dependent — and that is the finding.** It is large in **low-default** vintages (+200 to +420 bp; 2013–2017, 2020–2021) and **compresses to ≈ zero in high-default vintages** (2017Q4–2020Q1, defaults 2.3–3.8%), where FICO is occasionally ahead. VantageScore's advantage concentrates in benign cohorts and fades exactly when credit deteriorates.
+### 4.2 The edge is almost entirely single-borrower loans
+**+198bp on 1-borrower loans (Gini 0.464 vs 0.444); +2bp on 2-borrower loans (0.560 vs 0.560).** On co-borrower loans the two scores are tied — and both are markedly stronger, because the lowest-of-two aggregation already captures most of the signal.
 
-  ![Gini by vintage](figures/gini_by_vintage.png)
+![Borrower split](figures/borrower_split.png)
 
-- **The two scores are correlated but not interchangeable** — Spearman **0.75**, with large band-to-band reshuffling.
-- **Marginal (swing) borrowers:** at a matched **80% approval rate**, the loans VantageScore uniquely approves default **1.72% vs 2.05%** for FICO-unique approvals — VantageScore expands access **~16% more safely** at the inclusive margin.
+### 4.3 When they disagree, VantageScore is modestly "more right"
+Holding FICO fixed, default still falls sharply as VantageScore rises (and vice-versa, less so): residual Gini is **0.242 for VS within fixed FICO bands vs 0.218 for FICO within fixed VS bands.** Concretely, borrowers FICO rates super-prime (780+) but VantageScore rates subprime (<620) default ~**1.4%**, ~5× the true-super-prime rate.
 
-  ![Swing borrowers](figures/swing_borrowers.png)
+![Disagreement resolution](figures/disagreement_resolution.png)
 
-- **Below the floor:** GSE underwriting floors FICO at ~620; VantageScore scores a tail of borrowers below it, isolating measurable risk FICO cannot express.
-- *Caveat:* recent vintages (2022Q3–2023Q1) have small resolved samples (36-month seasoning incomplete) and are noisy.
+### 4.4 Marginal (swing) borrowers, at matched approval
+At a **matched 80% approval rate**, the loans VantageScore uniquely approves default **1.72%** vs **2.05%** for the loans FICO uniquely approves — a **16.3% relative (33.4bp absolute)** lower bad rate. (This is a *quality* difference at ~matched volume — within 0.1pp; **not** an access expansion, since VantageScore's unique-approval count is actually slightly lower. Controlling for vintage shrinks the gap to ~11%.)
 
-## Conclusion
-- **VantageScore 4.0 is a strong, frequently-superior substitute for Classic FICO in normal conditions — but no better under stress.** When defaults rise, the two rank-order default about equally.
-- For the credit-score-competition / FICO pricing-power debate, this cuts **both** ways: it undercuts *"FICO is irreplaceable"* (VantageScore matches or beats it most of the time) **and** *"VantageScore is strictly better"* (its edge evaporates precisely when discrimination matters most).
-- **Forward look:** this is **Classic FICO, not FICO 10T.** The like-for-like **FICO 10T vs VantageScore 4.0** comparison unlocks with the **summer-2026** data release — the decisive follow-up.
+![Swing borrowers](figures/swing_matched.png)
 
----
+### 4.5 The "stress" compression is the COVID shock — not a general law
+The high-default vintages where the edge vanishes (default >2.5%; chiefly 2018–2020Q1 originations) had **93% of their defaults occur in calendar 2020–2021** (68% in 2020 alone). So "the edge disappears under stress" is more precisely "the edge disappears in the COVID shock" — a single correlated event that hit borrowers across the score distribution at once (and whose D180 marks may partly reflect forbearance mechanics). Read it as evidence about one shock, not a general stress regime.
+
+![COVID timing](figures/covid_timing.png)
+
+### 4.6 Comparator discipline
+Only the **lowest-method** VantageScore is comparable to representative (lowest-method) FICO. The average-method variants post +337–390bp edges, but averaging across bureaus/borrowers mechanically reduces noise relative to a lowest-method FICO; using them would overstate the result.
+
+![Variant sensitivity](figures/variant_sensitivity.png)
+
+## 5. Conclusion
+- On Fannie-acquired mortgages, **VantageScore 4.0 is a real and frequently-better substitute for Classic FICO** — but the advantage is **concentrated in benign conditions and single-borrower loans**, and is **absent under the COVID shock and on co-borrower loans.**
+- For the credit-score-competition debate this cuts both ways: it undercuts a strong "FICO is irreplaceable" claim (VantageScore matches or beats Classic FICO in most cells) **and** a strong "VantageScore is strictly better" claim (no edge where it would matter most, and only on single-borrower loans).
+- **Out of scope:** this tests Classic FICO (not FICO 10T), Fannie-acquired loans (not applicants denied at origination, not Freddie separately, not post-2025 policy), and discrimination only (not pricing, lender operations, or adverse selection under lender score choice).
+
+## Limitations / ways this is wrong
+- **Classic FICO, not FICO 10T.** The policy-relevant modern comparison waits on the Summer-2026 10T data.
+- **COVID confound.** The stress-regime result is one macro event; COVID-era D180 may partly reflect forbearance, not pure credit deterioration.
+- **Binary label, not competing risks.** Prepayment is kept as a known non-default within a fixed 36-month window rather than modeled as a competing risk; alternative windows/definitions could move magnitudes.
+- **Restricted range & selection.** Evaluated only on already-acquired GSE loans (overwhelmingly ≥620), so absolute AUCs understate full-population discrimination, and segment cuts (e.g., LTV) are partly vintage-mix artifacts.
+- **Comparator method.** Results use lowest-method VantageScore; the legally/operationally "official" comparator method, if different, would change magnitudes.
 
 ## Reproducing
 
@@ -60,20 +80,20 @@ python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
 ./.venv/bin/python -m pytest -q          # unit-tested label/metrics/join engine
 ```
 
-1. **Get the data** (free, registration): the VantageScore 4.0 Historical Scores for the Historical Loan Performance Dataset (`historicalcreditscores.fanniemae.com`) and the Single-Family Loan Performance quarterly files (`datadynamics.fanniemae.com`).
-2. **Smoke (one quarter):** place a quarter's files, then:
+1. **Get the data** (free, registration): VantageScore 4.0 Historical Scores for the Historical Loan Performance Dataset (`historicalcreditscores.fanniemae.com`) and the Single-Family Loan Performance quarterly files (`datadynamics.fanniemae.com`).
+2. **Smoke (one quarter):**
    ```bash
    export GSE_MODE=smoke
    for s in 02_load 04_label 03_join 05_compare; do ./.venv/bin/python "$s.py"; done
    ```
-3. **Full panel** (disk-safe, quarter-by-quarter):
+3. **Full panel** (disk-safe, quarter-by-quarter) + analyses:
    ```bash
    unset GSE_MODE
-   for s in run_full 03_join 05_compare 06_charts; do ./.venv/bin/python "$s.py"; done
+   for s in run_full 03_join 05_compare 06_charts 07_deepdive 08_loanlevel_heatmap 09_gate 10_report_charts; do ./.venv/bin/python "$s.py"; done
    ```
 
-- `config.py` holds all parameters (default definition, window, score variant, column map). `gse/` is the unit-tested core; `0X_*.py` are the pipeline stages. Data lives under `data/` (git-ignored).
+- `config.py` holds all parameters; `gse/` is the unit-tested core; `0X_*.py` are the pipeline + analysis stages. Data lives under `data/` (git-ignored).
 
 ## References
-- FHFA, *Validation of FICO 10T and VantageScore 4.0* (2022); *Historical VantageScore 4.0 release* (Jul 2024); *FICO 10T historical data + extended VantageScore* announcement (Apr 2026).
+- FHFA, *Validation of FICO 10T and VantageScore 4.0* (Oct 2022); *Release of historical VantageScore 4.0 scores* (Jul 2024); *Credit Scores* policy page (FICO 10T historical data expected Summer 2026); Fannie Mae & Freddie Mac VantageScore 4.0 rollout announcements (Apr 2026).
 - Fannie Mae, *Single-Family Loan Performance Dataset* and *Historical Credit Score Files* (Credit Score Models and Reports Initiative).
