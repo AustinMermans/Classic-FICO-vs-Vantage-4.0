@@ -21,9 +21,10 @@ y = df["defaulted"].to_numpy().astype(float); vdr = df["vdr"].to_numpy()
 plt.figure(figsize=(7.8, 6.8))
 hb = plt.hexbin(fico, vs, C=y, reduce_C_function=np.mean, gridsize=55, mincnt=300, cmap="inferno_r")
 plt.colorbar(hb, label="default rate (mean per cell)")
-plt.plot([600, 850], [600, 850], "c--", lw=1, alpha=0.7, label="FICO = VS")
+plt.plot([600, 850], [600, 850], "c--", lw=1, alpha=0.7, label="FICO = VantageScore")
 plt.xlabel("Classic FICO"); plt.ylabel("VantageScore 4.0")
-plt.title(f"Where defaults live in score space — {len(fico):,} loans\ncolor = default rate (cells with <300 loans hidden)")
+plt.xlim(600, 855); plt.ylim(540, 855)
+plt.title(f"Default rate by FICO and VantageScore — {len(fico):,} loans\ndarker = higher default; cells with fewer than 300 loans hidden")
 plt.legend(loc="lower right"); plt.tight_layout()
 plt.savefig(C.OUTPUTS / "loanlevel_default_heatmap.png", dpi=150); plt.close()
 
@@ -31,14 +32,15 @@ plt.savefig(C.OUTPUTS / "loanlevel_default_heatmap.png", dpi=150); plt.close()
 benign = vdr < 0.01; stress = vdr > 0.025
 fig, axes = plt.subplots(1, 2, figsize=(13, 6), sharex=True, sharey=True)
 hb = None
-for ax, mask, name in [(axes[0], benign, "Benign vintages (vintage default <1%)"),
-                       (axes[1], stress, "Stress vintages (vintage default >2.5%)")]:
+for ax, mask, name in [(axes[0], benign, "Calm years (under 1% default)"),
+                       (axes[1], stress, "COVID-hit years (over 2.5% default)")]:
     hb = ax.hexbin(fico[mask], vs[mask], C=y[mask], reduce_C_function=np.mean,
                    gridsize=50, mincnt=200, cmap="inferno_r", vmin=0, vmax=0.12)
     ax.plot([600, 850], [600, 850], "c--", lw=1, alpha=0.6)
-    ax.set_title(f"{name}\nn={int(mask.sum()):,}"); ax.set_xlabel("Classic FICO")
+    ax.set_title(f"{name}\n{mask.sum()/1e6:.1f}M loans"); ax.set_xlabel("Classic FICO")
+    ax.set_xlim(600, 855); ax.set_ylim(540, 855)
 axes[0].set_ylabel("VantageScore 4.0")
 fig.colorbar(hb, ax=axes, label="default rate", shrink=0.85)
-fig.suptitle("Does the default cluster move under stress? (loan-level, score space)")
+fig.suptitle("Where defaults concentrate: calm years vs the COVID-hit years")
 fig.savefig(C.OUTPUTS / "loanlevel_heatmap_regime.png", dpi=150, bbox_inches="tight"); plt.close()
 print(f"wrote loanlevel heatmaps; benign n={int(benign.sum()):,}  stress n={int(stress.sum()):,}")

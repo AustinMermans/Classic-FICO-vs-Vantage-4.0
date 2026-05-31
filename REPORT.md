@@ -56,6 +56,10 @@ The high-default vintages where the edge vanishes (default >2.5%; chiefly 2018â€
 
 ![COVID timing](figures/covid_timing.png)
 
+The same point is visible at the loan level in score space: in calm years the default risk sits in the bottom-left corner (both scores low), but in the COVID-hit years the high-default zone spreads up and to the right into higher-score borrowers. A shock that lifts default across the whole score range is exactly what flattens each score's ranking power.
+
+![Default cluster, calm years vs COVID years](figures/loanlevel_heatmap_regime.png)
+
 ### 4.6 Comparator discipline
 Only the **lowest-method** VantageScore is comparable to representative (lowest-method) FICO. The average-method variants post +337â€“390bp edges, but averaging across bureaus/borrowers mechanically reduces noise relative to a lowest-method FICO; using them would overstate the result.
 
