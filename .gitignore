@@ -1,0 +1,13 @@
+# data + scratch (large, regenerable, never committed)
+data/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+
+# kept local — working notes, internal process docs, gate artifacts (not for the public repo)
+docs/
+.cdd_passed
+— replication.md
+— replication notes.md
