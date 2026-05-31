@@ -27,7 +27,7 @@ b2 = plt.bar(x + w/2, vv, w, label="VantageScore 4.0", color="#ff7f0e")
 for b in list(b1) + list(b2):
     plt.text(b.get_x() + b.get_width()/2, b.get_height(), f"{b.get_height():.3f}", ha="center", va="bottom", fontsize=9)
 plt.xticks(x, [m.upper() for m in metrics]); plt.ylabel("value")
-plt.title("Discrimination: who ranks default better (2020Q2 smoke)")
+plt.title(f"Discrimination: who ranks default better ({'2020Q2 smoke' if C.SMOKE else 'full panel 2013-2023'})")
 plt.legend(); plt.tight_layout(); plt.savefig(O / "discrimination_bars.png", dpi=150); plt.close()
 
 # 2. Swing borrowers (at the 50%-approved matched operating point)
@@ -73,7 +73,26 @@ hb = plt.hexbin(fico, vs, gridsize=45, cmap="viridis", bins="log", mincnt=1)
 plt.plot([580, 850], [580, 850], "r--", lw=1, label="y = x")
 plt.colorbar(hb, label="log10(loan count)")
 plt.xlabel("Classic FICO (loan representative)"); plt.ylabel("VantageScore 4.0 (current method)")
-plt.title("FICO vs VantageScore — 1.2M loans (Spearman 0.73)")
+_sp = at.select(pl.corr("fico", C.SCORE_VARIANT, method="spearman")).item()
+plt.title(f"FICO vs VantageScore — {len(fico):,} loans (Spearman {_sp:.2f})")
 plt.legend(); plt.tight_layout(); plt.savefig(O / "score_scatter_hexbin.png", dpi=150); plt.close()
 
-print("wrote: discrimination_bars, swing_borrowers, transition_heatmap, score_scatter_hexbin")
+# 5. Per-vintage Gini — the headline nuance (edge compresses when defaults rise)
+vpath = O / "discrimination_by_vintage.csv"
+if vpath.exists():
+    bv = pl.read_csv(vpath).sort("vintage")
+    x = np.arange(bv.height)
+    fig, ax1 = plt.subplots(figsize=(12, 5))
+    ax2 = ax1.twinx()
+    ax2.bar(x, [d * 100 for d in bv["default_rate"].to_list()], alpha=0.15, color="gray")
+    ax1.set_zorder(ax2.get_zorder() + 1); ax1.patch.set_visible(False)
+    ax1.plot(x, bv["fico_gini"].to_list(), marker="o", color="#1f77b4", label="Classic FICO Gini")
+    ax1.plot(x, bv["vs_gini"].to_list(), marker="s", color="#ff7f0e", label="VantageScore 4.0 Gini")
+    ax1.set_ylabel("Gini (lines)"); ax2.set_ylabel("Default rate % (gray bars)")
+    ax1.set_xticks(x); ax1.set_xticklabels(bv["vintage"].to_list(), rotation=90, fontsize=7)
+    ax1.set_xlabel("Acquisition vintage"); ax1.legend(loc="upper right")
+    ax1.set_title(f"Discrimination by vintage — VantageScore's edge compresses as defaults rise "
+                  f"({'smoke' if C.SMOKE else 'full panel 2013-2023'})")
+    fig.tight_layout(); fig.savefig(O / "gini_by_vintage.png", dpi=150); plt.close()
+
+print("wrote: discrimination_bars, swing_borrowers, transition_heatmap, score_scatter_hexbin, gini_by_vintage")

@@ -2,7 +2,9 @@
 
 *Which mortgage credit score actually predicts default better, on the same loans — and are they substitutable?*
 
-> **Status:** full-panel run in progress. Results/conclusions below are placeholders for the questions the analysis will answer. No numbers are reported until the full 2013–2023 panel completes.
+> ⚠️ **Scope — read this first.** This study compares **modern VantageScore 4.0** against **Classic (legacy) FICO** — **not FICO Score 10T.** Classic FICO is the only FICO score in the public GSE loan-performance data today. The like-for-like **FICO 10T vs VantageScore 4.0** comparison requires the FICO 10T historical data the GSEs have announced for **summer 2026** (not yet released). Until that drops, every result here is **VantageScore 4.0 (current method) vs Classic FICO.**
+
+> **Status:** Full panel complete — **2013Q2–2023Q1, 24.7M loans, 99.98% join**. Results below. (Classic FICO vs VantageScore 4.0; see scope caveat above.)
 
 ## Abstract
 - Head-to-head test of **Classic FICO** vs **VantageScore 4.0** as default predictors on the *same* Fannie Mae mortgages, using the first public loan-level VantageScore data (released 2024).
@@ -25,17 +27,29 @@
 - **Discrimination:** AUC / Gini / KS, overall and **per vintage** (stress-vintage robustness). Immature (unresolved) loans excluded; results are **conditional on GSE acquisition** (FICO floored ~620), not unconditional.
 - **Agreement & marginal analysis:** rank correlation, score-band transition matrix, and a **matched-approval-rate** swing-borrower test (who each score uniquely approves, and how those loans perform).
 
-## Results — *(to be filled by the full-panel run)*
-- [ ] Which score ranks default better overall (AUC / Gini / KS)?
-- [ ] Does any edge **survive the 2022 stress vintages** (per-vintage Gini)?
-- [ ] How substitutable are the two scores (rank correlation; band-transition reshuffling)?
-- [ ] At matched approval rates, whose **marginal (swing) approvals default less** — i.e., who would expand access more safely?
-- [ ] How much risk does VantageScore see **below FICO's ~620 floor** that FICO cannot express?
+## Results
+*(24.7M loans, resolved & ≤2-borrower, conditional on GSE acquisition / FICO ≥ 620; default = D180+ or credit event within 36 months)*
 
-## Conclusion — *(placeholder)*
-- [ ] Verdict on substitutability — and for which borrower segments it does/doesn't hold.
-- [ ] Implications for credit-score competition and FICO's mortgage pricing-power moat.
-- [ ] Forward look: this compares **Classic FICO, not FICO 10T** — the like-for-like 10T comparison unlocks with the summer-2026 data release.
+- **Overall, VantageScore 4.0 edges Classic FICO** on every discrimination metric: **Gini 0.492 vs 0.478 (+148 bp)**, AUC 0.746 vs 0.739, KS 0.368 vs 0.363.
+
+  ![Discrimination](figures/discrimination_bars.png)
+
+- **But the edge is vintage-dependent — and that is the finding.** It is large in **low-default** vintages (+200 to +420 bp; 2013–2017, 2020–2021) and **compresses to ≈ zero in high-default vintages** (2017Q4–2020Q1, defaults 2.3–3.8%), where FICO is occasionally ahead. VantageScore's advantage concentrates in benign cohorts and fades exactly when credit deteriorates.
+
+  ![Gini by vintage](figures/gini_by_vintage.png)
+
+- **The two scores are correlated but not interchangeable** — Spearman **0.75**, with large band-to-band reshuffling.
+- **Marginal (swing) borrowers:** at a matched **80% approval rate**, the loans VantageScore uniquely approves default **1.72% vs 1.90%** for FICO-unique approvals — VantageScore expands access **~16% more safely** at the inclusive margin.
+
+  ![Swing borrowers](figures/swing_borrowers.png)
+
+- **Below the floor:** GSE underwriting floors FICO at ~620; VantageScore scores a tail of borrowers below it, isolating measurable risk FICO cannot express.
+- *Caveat:* recent vintages (2022Q3–2023Q1) have small resolved samples (36-month seasoning incomplete) and are noisy.
+
+## Conclusion
+- **VantageScore 4.0 is a strong, frequently-superior substitute for Classic FICO in normal conditions — but no better under stress.** When defaults rise, the two rank-order default about equally.
+- For the credit-score-competition / FICO pricing-power debate, this cuts **both** ways: it undercuts *"FICO is irreplaceable"* (VantageScore matches or beats it most of the time) **and** *"VantageScore is strictly better"* (its edge evaporates precisely when discrimination matters most).
+- **Forward look:** this is **Classic FICO, not FICO 10T.** The like-for-like **FICO 10T vs VantageScore 4.0** comparison unlocks with the **summer-2026** data release — the decisive follow-up.
 
 ---
 
