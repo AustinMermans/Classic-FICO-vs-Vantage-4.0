@@ -41,6 +41,10 @@ Pooled Gini edge **+148bp**; within-vintage **+210bp loan-weighted**, **+100bp d
 
 ![Borrower split](figures/borrower_split.png)
 
+Crossing borrower count with regime shows the edge as a *distribution of effects*, not one average. The edge is large for single-borrower loans in calm years (~+335bp, each dot a loan-year), small-positive elsewhere, and **negative for two-borrower loans in the COVID years** — which is why the pooled two-borrower figure nets to ≈0.
+
+![Edge by borrower count and regime](figures/edge_by_borrower_regime.png)
+
 ### 4.3 When they disagree, VantageScore is modestly "more right"
 Holding FICO fixed, default still falls sharply as VantageScore rises (and vice-versa, less so): residual Gini is **0.242 for VS within fixed FICO bands vs 0.218 for FICO within fixed VS bands.** Concretely, borrowers FICO rates super-prime (780+) but VantageScore rates subprime (<620) default ~**1.4%**, ~5× the true-super-prime rate.
 

@@ -37,6 +37,11 @@ If a lender took the best-scoring X% of applicants, this is the default rate of 
 
 By borrower segment. The edge is larger on high-DTI loans and refinances, and negative on high-LTV loans and first-time buyers, where FICO does better. These are pooled across years, so some of the pattern is vintage mix rather than the segment itself.
 
+## The edge as a distribution, by borrower count and year
+![Edge by borrower count and regime](figures/edge_by_borrower_regime.png)
+
+Each gray dot is one loan-year; the red diamond is the average. The edge is big for single-borrower loans in calm years, and goes negative for two-borrower loans in the COVID years — so the average for two-borrower loans nets to roughly zero.
+
 ## The comparator matters
 ![Variant sensitivity](figures/variant_sensitivity.png)
 
