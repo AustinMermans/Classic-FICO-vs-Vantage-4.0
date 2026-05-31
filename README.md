@@ -27,4 +27,4 @@ What this doesn't settle: the FICO here is Classic FICO, the old model. FICO's c
 
 On the loans I can see, VantageScore 4.0 is about as good as Classic FICO, and a bit better in the cases above. It dents the idea that FICO can't be replaced. It doesn't crown the new score either. Its edge is small, and whether it shows up depends on which borrowers and which years you look at.
 
-Numbers, methods, and code are in [REPORT.md](REPORT.md).
+Numbers, methods, and code are in [REPORT.md](REPORT.md). More charts are in [GALLERY.md](GALLERY.md).
