@@ -12,7 +12,7 @@
 - Motivated by the GSEs' move to accept VantageScore 4.0 / FICO 10T, which puts FICO's decades-long sole-score position (and pricing power) in play.
 
 ## Introduction
-- FHFA validated FICO 10T and VantageScore 4.0 for the GSEs (2022) and the enterprises began accepting them (2026); a substitute score is only adoptable if it underwrites at least as well.
+- FHFA validated FICO 10T and VantageScore 4.0 for the GSEs (2022); adoption is phased — VantageScore 4.0 is in (limited) rollout, while FICO 10T is approved with historical 10T scores expected Summer 2026. A substitute score is only adoptable if it underwrites at least as well.
 - The 2024 public release of loan-level VantageScore 4.0 scores (joinable to the existing loan-performance data) makes an independent, outcome-based comparison possible for the first time.
 - Question this repo answers: **is VantageScore 4.0 a genuine substitute for Classic FICO in mortgage credit risk, and for which borrowers do they disagree?**
 
@@ -39,7 +39,7 @@
   ![Gini by vintage](figures/gini_by_vintage.png)
 
 - **The two scores are correlated but not interchangeable** — Spearman **0.75**, with large band-to-band reshuffling.
-- **Marginal (swing) borrowers:** at a matched **80% approval rate**, the loans VantageScore uniquely approves default **1.72% vs 1.90%** for FICO-unique approvals — VantageScore expands access **~16% more safely** at the inclusive margin.
+- **Marginal (swing) borrowers:** at a matched **80% approval rate**, the loans VantageScore uniquely approves default **1.72% vs 2.05%** for FICO-unique approvals — VantageScore expands access **~16% more safely** at the inclusive margin.
 
   ![Swing borrowers](figures/swing_borrowers.png)
 
@@ -61,8 +61,16 @@ python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
 ```
 
 1. **Get the data** (free, registration): the VantageScore 4.0 Historical Scores for the Historical Loan Performance Dataset (`historicalcreditscores.fanniemae.com`) and the Single-Family Loan Performance quarterly files (`datadynamics.fanniemae.com`).
-2. **Smoke (one quarter):** place a quarter's files, then `GSE_MODE=smoke ./.venv/bin/python 02_load.py && 04_label.py && 03_join.py && 05_compare.py`.
-3. **Full panel:** `./.venv/bin/python run_full.py` (disk-safe, quarter-by-quarter) `&& 03_join.py && 05_compare.py && 06_charts.py`.
+2. **Smoke (one quarter):** place a quarter's files, then:
+   ```bash
+   export GSE_MODE=smoke
+   for s in 02_load 04_label 03_join 05_compare; do ./.venv/bin/python "$s.py"; done
+   ```
+3. **Full panel** (disk-safe, quarter-by-quarter):
+   ```bash
+   unset GSE_MODE
+   for s in run_full 03_join 05_compare 06_charts; do ./.venv/bin/python "$s.py"; done
+   ```
 
 - `config.py` holds all parameters (default definition, window, score variant, column map). `gse/` is the unit-tested core; `0X_*.py` are the pipeline stages. Data lives under `data/` (git-ignored).
 

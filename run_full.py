@@ -99,6 +99,7 @@ def write_vs4_full() -> None:
 
 def main():
     quarters = sys.argv[1:] or WINDOW
+    failed = []
     for i, q in enumerate(quarters, 1):
         lp = LABELDIR / f"{q}.parquet"
         if lp.exists():
@@ -115,8 +116,17 @@ def main():
             print(f"[{i}/{len(quarters)}] {q}: loans={out.height:,} defaults={d:,}", flush=True)
         except Exception:
             print(f"[{i}/{len(quarters)}] {q}: ERROR\n{traceback.format_exc()}", flush=True)
+            failed.append(q)
 
-    done = sorted(LABELDIR.glob("*.parquet"))
+    # Completeness gate: never emit a panel that LOOKS complete (exit 0) but silently dropped a quarter.
+    have = {p.stem for p in LABELDIR.glob("*.parquet")}
+    missing = sorted(set(quarters) - have)
+    if failed or missing:
+        print(f"INCOMPLETE PANEL — failed={failed} missing={missing}. NOT writing loans_labeled "
+              f"(it would look complete). The run is resumable — fix the cause and re-run.", flush=True)
+        sys.exit(1)
+
+    done = sorted(p for p in LABELDIR.glob("*.parquet") if p.stem in set(quarters))
     loans = pl.concat([pl.read_parquet(p) for p in done])
     loans.write_parquet(C.PARQUET / "loans_labeled.parquet")
     print(f"COMBINED loans_labeled: {loans.height:,} loans across {len(done)} quarters", flush=True)
