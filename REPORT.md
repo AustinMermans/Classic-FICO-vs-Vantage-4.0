@@ -55,6 +55,10 @@ At a **matched 80% approval rate**, the loans VantageScore uniquely approves def
 
 ![Swing borrowers](figures/swing_matched.png)
 
+The same comparison across *every* approval rate, not just 80%: at each cutoff, the loans only VantageScore approves default less than the loans only FICO approves, and the gap widens as the cutoff tightens (where the swing sets are smaller and the marginal borrower riskier). The dashed line is the whole approved book for scale.
+
+![Approval estuary](figures/approval_estuary.png)
+
 ### 4.5 The "stress" compression is the COVID shock — not a general law
 The high-default vintages where the edge vanishes (default >2.5%; chiefly 2018–2020Q1 originations) had **93% of their defaults occur in calendar 2020–2021** (68% in 2020 alone). So "the edge disappears under stress" is more precisely "the edge disappears in the COVID shock" — a single correlated event that hit borrowers across the score distribution at once (and whose D180 marks may partly reflect forbearance mechanics). Read it as evidence about one shock, not a general stress regime.
 

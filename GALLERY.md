@@ -32,6 +32,11 @@ Both scores fall steadily as the score rises. VantageScore extends below FICO's 
 
 If a lender took the best-scoring X% of applicants, this is the default rate of the loans they would take. Ranking by VantageScore gives a slightly lower-default book at most volumes.
 
+## The swing loans, at every approval rate
+![Approval estuary](figures/approval_estuary.png)
+
+At each approval rate, this compares the loans only VantageScore would approve against the loans only FICO would approve — the "swing" set where the two scores disagree. The VantageScore-only loans default less at every cutoff, and the gap widens as you approve fewer people. The dashed line is the whole approved book for scale.
+
 ## Where VantageScore's edge comes from
 ![Edge by segment](figures/segment_edge.png)
 

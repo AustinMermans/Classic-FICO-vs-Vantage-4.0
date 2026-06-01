@@ -1,6 +1,7 @@
 """Deep-dive charts (full panel):
   1. Disagreement-resolution heatmap  — default rate by FICO-band x VS-band (who's right when they disagree)
   2. Approval frontier                — default rate at every approval volume, FICO- vs VS-ranked
+  2b. Approval estuary                — swing-loan default rate (only-FICO vs only-VS approvals) at every cutoff
   3. Segment edge                     — VantageScore Gini edge by LTV / DTI / FTHB / purpose
                                          (FICO-band strata intentionally excluded — see note in code)
   4. Macro overlay                    — vintage edge vs realized default, colored by origination mortgage rate
@@ -70,6 +71,39 @@ plt.xlabel("Approval rate (% approved, best scores first)")
 plt.ylabel("Default rate of the approved book (%)")
 plt.title("Approval frontier — default rate at every approval volume\nlower = better (the score that lets in fewer future defaults)")
 plt.legend(); plt.grid(alpha=0.3); plt.tight_layout(); plt.savefig(O / "approval_frontier.png", dpi=150); plt.close()
+
+# ---- 2b. Approval estuary — swing-loan quality at every cutoff ----
+# Generalizes the single 80%-approval number in §4.4 across the whole approval curve:
+# at each matched approval rate, compare the default rate of the loans ONLY FICO approves
+# vs the loans ONLY VantageScore approves (the "swing" set where the two scores disagree).
+def _pct_rank(s):
+    r = np.empty(len(s)); r[np.argsort(s, kind="mergesort")] = np.arange(len(s)); return r / len(s)
+
+_fr, _vr = _pct_rank(fico), _pct_rank(vs)
+_rates = np.linspace(0.50, 0.98, 40)
+_fo, _vo, _ov = [], [], []
+for _r in _rates:
+    _cut = 1 - _r
+    _af, _av = _fr >= _cut, _vr >= _cut
+    _onlyf, _onlyv = _af & ~_av, _av & ~_af
+    _fo.append(y[_onlyf].mean() * 100 if _onlyf.sum() > 2000 else np.nan)
+    _vo.append(y[_onlyv].mean() * 100 if _onlyv.sum() > 2000 else np.nan)
+    _ov.append(y[_af].mean() * 100)
+_fo, _vo, _ov, _x = np.array(_fo), np.array(_vo), np.array(_ov), _rates * 100
+plt.figure(figsize=(11, 6)); _ax = plt.gca()
+_ax.fill_between(_x, _fo, _vo, where=_fo >= _vo, color="#2ca02c", alpha=0.18, interpolate=True)
+_ax.fill_between(_x, _fo, _vo, where=_fo < _vo, color="#d62728", alpha=0.18, interpolate=True)
+_ax.plot(_x, _fo, color="#d62728", lw=2.2, marker="o", ms=3, label="default rate of loans only FICO approves")
+_ax.plot(_x, _vo, color="#2ca02c", lw=2.2, marker="o", ms=3, label="default rate of loans only VantageScore approves")
+_ax.plot(_x, _ov, color="#777", lw=1.2, ls="--", label="default rate of the whole approved book")
+_ax.axvline(80, color="k", lw=0.6, ls=":")
+_ax.text(79.5, np.nanmax(_fo) * 0.55, "80% approval\n(REPORT §4.4)", fontsize=8, va="center", ha="right", color="#555")
+_ax.set_xlabel("approval rate  (take the best-scoring X% of applicants)")
+_ax.set_ylabel("default rate of the swing loans (%)")
+_ax.set_title("The estuary of disagreement: where the two scores approve different loans\n"
+              "at every cutoff, the loans only VantageScore approves default less than the loans only FICO approves", fontsize=12)
+_ax.legend(loc="upper right", fontsize=9)
+plt.tight_layout(); plt.savefig(O / "approval_estuary.png", dpi=150); plt.close()
 
 # ---- 3. Segment edge ----
 df = df.with_columns(
@@ -142,4 +176,4 @@ except Exception as e:
     print("macro chart skipped:", e)
 
 print("deep-dive charts:", seg.height, "segments;",
-      "wrote disagreement_resolution, approval_frontier, segment_edge, macro_edge_vs_default")
+      "wrote disagreement_resolution, approval_frontier, approval_estuary, segment_edge, macro_edge_vs_default")
