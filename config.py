@@ -1,10 +1,10 @@
-"""Central config for the VantageScore-vs-FICO bake-off. Edit here, never hardcode in scripts."""
+"""Central config for the credit-score bake-offs. Edit here, never hardcode in scripts."""
 import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
-RAW = DATA / "raw"            # registered base + VS4 files land here
+RAW = DATA / "raw"            # registered base + historical score files land here
 PARQUET = DATA / "parquet"    # typed columnar artifacts
 OUTPUTS = DATA / "outputs"    # tables + figures
 for _p in (RAW, PARQUET, OUTPUTS):
@@ -22,6 +22,34 @@ VS4_SCORE_COLUMNS = [
 ]
 JOIN_KEYS = ["loan_identifier", "acquisition_quarter"]   # composite key
 SCORE_VARIANT = "vs4_current_method"   # apples-to-apples with Classic FICO; sensitivity-check others
+
+# --- Part 2: July 2026 FICO 10T + refreshed VS4 release ---
+# Both historical-score files use the same seven-column layout and identical composite key.
+# The current-method fields are the like-for-like comparison: median/lower bureau score per
+# borrower, then the lowest borrower representative score for the loan. The trimerge/bimerge
+# variants use Average-then-Average and belong in sensitivity analysis, not the headline.
+FICO10T_SCORE_COLUMNS = [
+    "acquisition_quarter", "loan_identifier",
+    "fico_10t_current_method", "fico_10t_trimerge",
+    "fico_10t_bimerge_lowest", "fico_10t_bimerge_median", "fico_10t_bimerge_highest",
+]
+PART2_SCORES = {
+    "Classic FICO": "fico",
+    "VantageScore 4.0": "vs4_current_method",
+    "FICO Score 10T": "fico_10t_current_method",
+}
+PART2_SCORE_DIRS = {
+    "vs4": RAW / "part2_vs4_loanperf",
+    "fico10t": RAW / "fico10t_loanperf",
+}
+PART2_SCORE_PARQUETS = {
+    "vs4": PARQUET / "part2_vs4_scores.parquet",
+    "fico10t": PARQUET / "fico10t_scores.parquet",
+}
+# Keep the headline on the original fully observed comparison window. The July 2026 score files
+# extend through 2025Q3, but those newer acquisitions do not yet have a 36-month outcome window.
+PART2_HEADLINE_START = "2013Q2"
+PART2_HEADLINE_END = "2023Q1"
 
 # --- default label (CRT-style credit event) ---
 DLQ_THRESHOLD_MONTHS = 6                       # 180+ days delinquent

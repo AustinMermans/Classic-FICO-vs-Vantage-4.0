@@ -1,5 +1,9 @@
 # Does a newer credit score predict mortgage defaults better than FICO?
 
+> **2026 update:** Fannie Mae released historical FICO Score 10T data on July 1, 2026.
+> The policy-relevant three-way follow-up—Classic FICO vs. VantageScore 4.0 vs. FICO 10T—is
+> documented in [PART2.md](PART2.md). The original study below is preserved as Part 1.
+
 For two decades, getting a Fannie Mae or Freddie Mac mortgage meant being graded by one company: FICO. No rival was allowed, and in the last few years FICO raised the price of its mortgage score sharply, because lenders had nowhere else to go. Regulators have now approved a competitor, VantageScore 4.0, and in July 2024 the data to test it went public for the first time. So I ran the test.
 
 I took 24.7 million mortgages Fannie Mae bought between 2013 and 2023. Each one carries both a Classic FICO score and a VantageScore 4.0, and each has a resolved default outcome. The question is simple: which score better predicts who defaults?

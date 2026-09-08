@@ -6,6 +6,7 @@ label tables and write the full VS4 scores. Peak disk ~ one quarter's CSV (<=25G
 Usage:
   ./.venv/bin/python run_full.py             # all quarters 2013Q2-2023Q1
   ./.venv/bin/python run_full.py 2020Q2      # specific quarter(s)  (validation)
+  ./.venv/bin/python run_full.py --labels-only  # Part 2: reuse labels, load scores separately
 Resumable: quarters whose labels/<q>.parquet already exists are skipped.
 """
 import sys
@@ -98,7 +99,11 @@ def write_vs4_full() -> None:
 
 
 def main():
-    quarters = sys.argv[1:] or WINDOW
+    labels_only = "--labels-only" in sys.argv[1:]
+    quarters = [arg for arg in sys.argv[1:] if arg != "--labels-only"] or WINDOW
+    unknown = [arg for arg in quarters if arg not in ALLQ]
+    if unknown:
+        sys.exit(f"Unknown acquisition quarter(s): {unknown}; expected values like 2020Q2")
     failed = []
     for i, q in enumerate(quarters, 1):
         lp = LABELDIR / f"{q}.parquet"
@@ -130,7 +135,10 @@ def main():
     loans = pl.concat([pl.read_parquet(p) for p in done])
     loans.write_parquet(C.PARQUET / "loans_labeled.parquet")
     print(f"COMBINED loans_labeled: {loans.height:,} loans across {len(done)} quarters", flush=True)
-    write_vs4_full()
+    if labels_only:
+        print("Skipped legacy VS4 load (--labels-only); run 11_part2_load.py for Part 2 scores.")
+    else:
+        write_vs4_full()
 
 
 if __name__ == "__main__":

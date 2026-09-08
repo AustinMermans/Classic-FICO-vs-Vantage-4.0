@@ -4,7 +4,11 @@ from config import JOIN_KEYS, SCORE_VARIANT
 
 
 def join_scores_to_perf(
-    scores: pl.DataFrame, perf_loans: pl.DataFrame, *, keys: list[str] | None = None
+    scores: pl.DataFrame,
+    perf_loans: pl.DataFrame,
+    *,
+    keys: list[str] | None = None,
+    match_column: str = SCORE_VARIANT,
 ) -> tuple[pl.DataFrame, dict]:
     """Left-join scores onto one-row-per-loan base records on the composite key.
 
@@ -17,7 +21,9 @@ def join_scores_to_perf(
     dup_perf = perf_loans.group_by(keys).len().filter(pl.col("len") > 1).height
 
     joined = perf_loans.join(scores.unique(subset=keys, keep="first"), on=keys, how="left")
-    matched = joined.filter(pl.col(SCORE_VARIANT).is_not_null()).height
+    if match_column not in scores.columns:
+        raise ValueError(f"match_column {match_column!r} is absent from score file")
+    matched = joined.filter(pl.col(match_column).is_not_null()).height
     stats = {
         "perf_rows": perf_loans.height,
         "matched": matched,

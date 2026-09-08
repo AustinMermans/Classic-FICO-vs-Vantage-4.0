@@ -33,3 +33,17 @@ def test_partial_match_rate_and_dup_detection():
     joined, stats = join_scores_to_perf(scores, perf)
     assert stats["dup_scores"] == 1
     assert stats["match_rate"] < 1.0
+
+
+def test_join_supports_a_non_vantage_match_column():
+    scores = pl.DataFrame({
+        "loan_identifier": [1],
+        "acquisition_quarter": ["2020Q2"],
+        "fico_10t_current_method": [730],
+    })
+    perf = _perf([(1, "2020Q2", 715)])
+    joined, stats = join_scores_to_perf(
+        scores, perf, match_column="fico_10t_current_method"
+    )
+    assert stats["match_rate"] == 1.0
+    assert joined["fico_10t_current_method"][0] == 730
