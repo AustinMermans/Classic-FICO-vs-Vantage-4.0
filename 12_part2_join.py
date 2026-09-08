@@ -26,7 +26,7 @@ def _join_and_gate(
 def main() -> None:
     loans = pl.read_parquet(C.PARQUET / "loans_labeled.parquet").filter(
         pl.col("acquisition_quarter").is_between(
-            C.PART2_HEADLINE_START, C.PART2_HEADLINE_END, closed="both"
+            pl.lit(C.PART2_HEADLINE_START), pl.lit(C.PART2_HEADLINE_END), closed="both"
         )
     )
     vs4 = pl.read_parquet(C.PART2_SCORE_PARQUETS["vs4"])

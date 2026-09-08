@@ -1,8 +1,9 @@
 # Does a newer credit score predict mortgage defaults better than FICO?
 
 > **2026 update:** Fannie Mae released historical FICO Score 10T data on July 1, 2026.
-> The policy-relevant three-way follow-up—Classic FICO vs. VantageScore 4.0 vs. FICO 10T—is
-> documented in [PART2.md](PART2.md). The original study below is preserved as Part 1.
+> The completed three-way follow-up—Classic FICO vs. VantageScore 4.0 vs. FICO 10T—is in
+> **[Part 2](PART2.md)**. FICO 10T leads both alternatives on the same 24.7 million loans. The
+> original study below is preserved as Part 1.
 
 For two decades, getting a Fannie Mae or Freddie Mac mortgage meant being graded by one company: FICO. No rival was allowed, and in the last few years FICO raised the price of its mortgage score sharply, because lenders had nowhere else to go. Regulators have now approved a competitor, VantageScore 4.0, and in July 2024 the data to test it went public for the first time. So I ran the test.
 
@@ -26,7 +27,7 @@ Say a lender ranked these same loans by each score and kept the best-scoring sha
 
 ![Default rate of the loans only one score keeps, at every cutoff](figures/approval_estuary.png)
 
-What this doesn't settle: the FICO here is Classic FICO, the old model. FICO's current one, 10T, is the real head-to-head, and that data is only expected in summer 2026. These are also only the loans Fannie actually bought, so they say nothing about borrowers turned down before a loan existed, or about pricing, or about how lenders would really use the scores. And the only stretch of real stress in the data is COVID, so that part of the result rests on a single episode.
+What this Part 1 comparison didn't settle: the FICO here is Classic FICO, the old model. FICO 10T is the real head-to-head, and its historical data was released in July 2026. **[Part 2 runs that comparison](PART2.md)** and finds 10T ahead of both VantageScore 4.0 and Classic FICO. These are still only the loans Fannie actually bought, so they say nothing about borrowers turned down before a loan existed, or about pricing, or about how lenders would really use the scores. And the only stretch of real stress in the data is COVID, so that part of the result rests on a single episode.
 
 On the loans I can see, VantageScore 4.0 is about as good as Classic FICO, and a bit better in the cases above. That weakens the claim that FICO can't be replaced, but it doesn't make VantageScore the clear winner: the edge is small, and whether it shows up at all depends on which borrowers and which years you look at.
 
