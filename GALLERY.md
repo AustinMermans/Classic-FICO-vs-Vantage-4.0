@@ -1,63 +1,90 @@
-# More charts
+# Part 2 chart gallery
 
-Extra views from the same analysis. The writeup is in [README](README.md); the methods and exact numbers are in [REPORT](REPORT.md).
+Every chart below comes from the same 24.7 million-loan comparison. The short version is in the
+[README](README.md); exact methods and numbers are in the [extended report](REPORT.md). The
+[original Classic-FICO-versus-VantageScore gallery](PART1_GALLERY.md) is preserved separately.
 
-## FICO vs VantageScore, all 25 million loans
-![FICO vs VantageScore density](figures/score_scatter_hexbin.png)
+## Who wins overall?
 
-Each cell counts loans. The two scores agree along the bright diagonal and disagree across the spread. FICO stops at 620, the old acquisition floor; VantageScore runs lower.
+![Overall Gini comparison](figures/part2_gini_comparison.png)
 
-## Where default lives in score space
-![Default rate across the score grid](figures/loanlevel_default_heatmap.png)
+**What it shows:** how well each score sorts future defaulters toward the risky end of the list.
+Gini is 0 for a random ranking and 1 for a perfect one. FICO 10T is highest at 0.516; VantageScore
+4.0 is next at 0.492; Classic FICO is 0.477.
 
-Default rate across the FICO by VantageScore grid. Risk rises toward the bottom-left, where both scores are low.
+**What to notice:** the newer models both beat Classic FICO, but 10T's gain over VantageScore is
+larger than VantageScore's gain over Classic. This is a ranking result, not a claim that 10T's raw
+score numbers are calibrated probabilities.
 
-## The same grid, calm years vs the COVID cohorts
-![Default cluster, calm vs stress](figures/loanlevel_heatmap_regime.png)
+## Does the winner change from year to year?
 
-In the high-default (COVID) loans, the dark zone spreads up and to the right into higher scores. The two panels show raw default rates on very different base rates, so read it as where risk concentrates, not as exact levels.
+![Gini by acquisition quarter](figures/part2_gini_by_vintage.png)
 
-## Where each FICO band lands in VantageScore
-![FICO band to VantageScore band](figures/transition_heatmap.png)
+**What it shows:** the same ranking test repeated separately for each quarter in which Fannie Mae
+acquired the loans.
 
-Most loans sit near the diagonal. The off-diagonal mass is where the two scores disagree.
+**What to notice:** the lines move together because the economic environment changes how easy
+defaults are to rank. They fall sharply for loans exposed to the early COVID shock. The green 10T
+line nevertheless stays above both alternatives in all 40 quarters.
 
-## Default rate by score band
-![Default rate by band](figures/calibration_by_band.png)
+## How large is 10T's lead each quarter?
 
-Both scores fall steadily as the score rises. VantageScore extends below FICO's 620 floor, and that sub-620 group is its highest-default bucket.
+![10T edge by acquisition quarter](figures/part2_gini_edge_by_vintage.png)
 
-## Default rate at every approval rate
-![Approval frontier](figures/approval_frontier.png)
+**What it shows:** the previous chart with the common movement stripped away. Each point is 10T's
+Gini minus the competing score's Gini for that quarter. A point above zero is a 10T win.
 
-If a lender took the best-scoring X% of applicants, this is the default rate of the loans they would take. Ranking by VantageScore gives a slightly lower-default book at most volumes.
+**What to notice:** every point is above zero. The 10T–VantageScore gap ranges from about 101 to
+415 Gini basis points. This is the strongest evidence that the pooled result is not being driven by
+one giant vintage.
 
-## The swing loans, at every approval rate
-![Approval estuary](figures/approval_estuary.png)
+## Does adding a second borrower change the answer?
 
-At each approval rate, this compares the loans only VantageScore would approve against the loans only FICO would approve — the "swing" set where the two scores disagree. The VantageScore-only loans default less at every cutoff, and the gap widens as you approve fewer people. The dashed line is the whole approved book for scale.
+![Gini by borrower count](figures/part2_borrower_split.png)
 
-## Where VantageScore's edge comes from
-![Edge by segment](figures/segment_edge.png)
+**What it shows:** the three-way comparison separately for loans with one borrower and two.
 
-By borrower segment. The edge is larger on high-DTI loans and refinances, and negative on high-LTV loans and first-time buyers, where FICO does better. These are pooled across years, so some of the pattern is vintage mix rather than the segment itself.
+**What to notice:** all three models rank two-borrower loans more cleanly. VantageScore and Classic
+FICO are almost tied in that group—the central finding from Part 1—but 10T is still ahead. Its lead
+is therefore broader than VantageScore's original advantage over Classic.
 
-## The edge as a distribution, by borrower count and year
-![Edge by borrower count and regime](figures/edge_by_borrower_regime.png)
+## What happens to the loans where the modern scores disagree?
 
-Each gray dot is one loan-year; the red diamond is the average. The edge is big for single-borrower loans in calm years, and goes negative for two-borrower loans in the COVID years — so the average for two-borrower loans nets to roughly zero.
+![Swing borrowers at two portfolio sizes](figures/part2_swing_matched.png)
 
-## The comparator matters
-![Variant sensitivity](figures/variant_sensitivity.png)
+**What it shows:** rank the same originated loans by each modern score and keep a nominal top 50%
+or 80%. Then look only at the loans kept by one model but not the other. Lower default is better.
 
-VantageScore has several scoring methods. Only the lowest-of-borrowers method is a fair match to representative FICO, and it shows the +148bp edge. The average-based methods look larger but aren't comparing like with like.
+**What to notice:** the orange VantageScore-only group defaults more often at both points. At the
+80% point it is 2.06%, versus 1.56% for the green 10T-only group. This is a retrospective loan
+selection exercise, not a study of applicants or actual mortgage approvals.
 
-## Overall scores
-![AUC, Gini, KS](figures/discrimination_bars.png)
+## Is that swing-loan result just one convenient cutoff?
 
-AUC, Gini, and KS are three standard measures of how well a score separates defaulters from everyone else. VantageScore edges FICO on all three, by a little.
+![Swing loans across the selection curve](figures/part2_approval_estuary.png)
 
-## The edge fades as defaults rise
-![Edge vs default rate by year](figures/macro_edge_vs_default.png)
+**What it shows:** the previous test repeated from keeping the best-scoring 10% through 90% of the
+observed loans. The shaded space is the difference in default rates between the two swap groups.
 
-Each dot is one loan-year. VantageScore's lead is largest in low-default years and near zero in high-default ones.
+**What to notice:** the 10T-only loans have the lower default rate at every tested portfolio size.
+The absolute gap gets wider as more marginal loans enter the selected group. Integer score ties
+make realized portfolio shares slightly different at each nominal cutoff.
+
+## Where do the two modern scores disagree?
+
+![Default rate across modern-score rank groups](figures/part2_rank_disagreement.png)
+
+**What it shows:** every loan is placed into a risk-ranked tenth under each modern model. The color
+is the observed 36-month default rate for that pair of rank groups.
+
+**What to notice:** risk is darkest in the lower-left, where both models call a loan risky, and
+lightest toward the upper-right, where both call it safe. Moving vertically while holding
+VantageScore's rank fixed still changes risk, and moving horizontally while holding 10T fixed does
+too: the models overlap, but neither is a copy of the other. Cells with fewer than 10,000 loans are
+hidden so tiny extreme-disagreement groups do not control the color scale.
+
+## Want the original pictures?
+
+Part 1 contains additional Classic-FICO-versus-VantageScore views, including score-band
+transitions, calibration bands, loan-level COVID heatmaps, and segment cuts. They remain in the
+[Part 1 gallery](PART1_GALLERY.md); this page keeps the current three-score story front and center.

@@ -44,7 +44,11 @@ def materialize_score_inputs(
 
 
 def load_score_files(files: Iterable[str | Path], required_columns: list[str]) -> pl.DataFrame:
-    """Read pipe-delimited historical-score files and enforce schema, type, and key uniqueness."""
+    """Read score files, enforce their keys, and null values outside the valid 300-850 range.
+
+    Fannie uses 9999 when FICO Score 10T could not be calculated. Range validation handles that
+    sentinel and prevents any unavailable score from being mistaken for an exceptionally safe loan.
+    """
     paths = [Path(path) for path in files]
     if not paths:
         raise ValueError("No historical score files supplied")
@@ -64,6 +68,15 @@ def load_score_files(files: Iterable[str | Path], required_columns: list[str]) -
             pl.col("loan_identifier").cast(pl.Int64, strict=False),
             pl.col("acquisition_quarter").cast(pl.Utf8),
             *[pl.col(name).cast(pl.Float64, strict=False) for name in score_columns],
+        )
+        .with_columns(
+            *[
+                pl.when(pl.col(name).is_between(300, 850, closed="both"))
+                .then(pl.col(name))
+                .otherwise(None)
+                .alias(name)
+                for name in score_columns
+            ]
         )
         .collect(engine="streaming")
     )

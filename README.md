@@ -1,34 +1,57 @@
-# Does a newer credit score predict mortgage defaults better than FICO?
+# Which credit score predicts mortgage defaults best?
 
-> **2026 update:** Fannie Mae released historical FICO Score 10T data on July 1, 2026.
-> The completed three-way follow-up—Classic FICO vs. VantageScore 4.0 vs. FICO 10T—is in
-> **[Part 2](PART2.md)**. FICO 10T leads both alternatives on the same 24.7 million loans. The
-> original study below is preserved as Part 1.
+*Classic FICO vs. VantageScore 4.0 vs. FICO Score 10T, tested on the same 24.7 million mortgages.*
 
-For two decades, getting a Fannie Mae or Freddie Mac mortgage meant being graded by one company: FICO. No rival was allowed, and in the last few years FICO raised the price of its mortgage score sharply, because lenders had nowhere else to go. Regulators have now approved a competitor, VantageScore 4.0, and in July 2024 the data to test it went public for the first time. So I ran the test.
+[Extended report](REPORT.md) · [Chart gallery](GALLERY.md) · [Original two-score study](PART1.md)
 
-I took 24.7 million mortgages Fannie Mae bought between 2013 and 2023. Each one carries both a Classic FICO score and a VantageScore 4.0, and each has a resolved default outcome. The question is simple: which score better predicts who defaults?
+The first version of this project had an annoying hole in the middle of it. I could test the new
+VantageScore 4.0 against old Classic FICO, but the historical data for FICO's newer model—FICO
+Score 10T—didn't exist yet. So the real modern-versus-modern contest had to wait.
 
-To compare them, rank borrowers by each score and see where the defaulters land. A score that works puts them near the bottom. I measured that overall, then split the loans by the year they were made and by number of borrowers.
+That data arrived on July 1, 2026. I rebuilt the study with all three scores attached to the same
+Fannie Mae loans, then watched what happened to each mortgage over the next three years.
 
-Across the whole set, VantageScore comes out a little ahead of Classic FICO. But that lead depends on the year the loan was made. In years with few defaults, VantageScore sorted risk better; in the high-default years the two were even. Those high-default loans were mostly made between 2018 and early 2020, and 93% of their defaults landed in 2020 and 2021. When the pandemic hit, defaults jumped across every score level at once, so where a borrower ranked mattered less. Read it as a COVID-period result; the data don't show how the scores hold up in other downturns.
+**In this test, FICO 10T wins.**
 
-![How well each score sorts risk, by loan year](figures/gini_by_vintage.png)
+A useful credit score should push the loans that later default toward the risky end of the list.
+Gini measures how well it does that: zero is no better than random ordering, and higher is better.
+FICO 10T scores **0.516**, ahead of VantageScore at **0.492** and Classic FICO at **0.477**.
 
-Split the loans by how many people are on them, and almost all of VantageScore's edge comes from single-borrower loans. On two-borrower loans the scores tie, and both do better than they do on solo borrowers.
+![FICO 10T separates future defaulters best](figures/part2_gini_comparison.png)
 
-![Single-borrower vs two-borrower loans](figures/borrower_split.png)
+That is not an enormous gulf, but it is not a one-off wobble. Split the loans into the 40 quarters
+when Fannie acquired them and 10T finishes first in every single one. All three scores struggle
+more with loans exposed to the early COVID shock, but 10T keeps its lead through that period too.
 
-The two scores often disagree about the same person, and when they do, the default outcome tracks VantageScore a bit more than FICO. The sharpest example: borrowers FICO rates top-tier but VantageScore flags as risky default about five times as often as borrowers both scores rate highly.
+![FICO 10T leads in every acquisition quarter](figures/part2_gini_by_vintage.png)
 
-![Where the defaults are when the scores disagree](figures/disagreement_resolution.png)
+The borrower split tells the same story. In the original study, VantageScore's advantage over
+Classic FICO came almost entirely from loans with one borrower; on two-borrower loans they tied.
+FICO 10T improves on both of them in both groups.
 
-Say a lender ranked these same loans by each score and kept the best-scoring share. The two scores pick slightly different loans, and at every cutoff the ones only VantageScore keeps default less than the ones only FICO keeps. At a four-in-five rate it's 1.7% versus 2.0%; tighten the cutoff and the gap widens.
+![FICO 10T leads with one borrower or two](figures/part2_borrower_split.png)
 
-![Default rate of the loans only one score keeps, at every cutoff](figures/approval_estuary.png)
+The most practical test is what happens when the models disagree. Imagine keeping the best-scoring
+80% of these already-originated loans under each modern score. The two models swap about 1.3
+million loans in each direction. The loans kept only by 10T default **1.56%** of the time; the loans
+kept only by VantageScore default **2.06%** of the time. At the 50% mark it is **0.61% versus
+0.80%**. Across selection rates from 10% to 90%, the 10T-only group defaults less every time.
 
-What this Part 1 comparison didn't settle: the FICO here is Classic FICO, the old model. FICO 10T is the real head-to-head, and its historical data was released in July 2026. **[Part 2 runs that comparison](PART2.md)** and finds 10T ahead of both VantageScore 4.0 and Classic FICO. These are still only the loans Fannie actually bought, so they say nothing about borrowers turned down before a loan existed, or about pricing, or about how lenders would really use the scores. And the only stretch of real stress in the data is COVID, so that part of the result rests on a single episode.
+![Default rate of the loans kept by only one modern score](figures/part2_approval_estuary.png)
 
-On the loans I can see, VantageScore 4.0 is about as good as Classic FICO, and a bit better in the cases above. That weakens the claim that FICO can't be replaced, but it doesn't make VantageScore the clear winner: the edge is small, and whether it shows up at all depends on which borrowers and which years you look at.
+So is FICO 10T *the* best credit score? On the question this dataset can answer, yes: it is the best
+of these three at ranking 36-month default risk for mortgages Fannie Mae actually acquired.
+VantageScore still beats Classic FICO overall, so the first study's case for competition survives;
+the new result simply says the newer FICO model is stronger here.
 
-Numbers, methods, and code are in [REPORT.md](REPORT.md). More charts are in [GALLERY.md](GALLERY.md).
+There is a harder limit around “here.” These are mortgages that were originated and sold to
+Fannie—not applications, denied borrowers, or the full credit market. This study cannot tell us
+who gains access to a mortgage, how a lender would price it, what either model costs, or what would
+happen if lenders changed behavior after adoption. It measures risk ranking, not fairness,
+calibration, or business value. And the only serious stress episode in the window is COVID.
+
+The answer, then, is clear without being universal: **FICO 10T wins this historical mortgage
+bake-off.** The [extended report](REPORT.md) has the exact sample construction, metrics, robustness
+checks, and limitations. The [gallery](GALLERY.md) walks through every new figure. The
+[original Part 1 study](PART1.md) is preserved exactly as the question looked before 10T data
+arrived.
