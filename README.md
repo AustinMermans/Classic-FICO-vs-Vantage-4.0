@@ -1,57 +1,75 @@
 # Which credit score predicts mortgage defaults best?
 
-*Classic FICO vs. VantageScore 4.0 vs. FICO Score 10T, tested on the same 24.7 million mortgages.*
+*Classic FICO, VantageScore 4.0, and FICO Score 10T—tested on the same 24.7 million mortgages.*
 
 [Extended report](REPORT.md) · [Chart gallery](GALLERY.md) · [Original two-score study](PART1.md)
 
-The first version of this project had an annoying hole in the middle of it. I could test the new
-VantageScore 4.0 against old Classic FICO, but the historical data for FICO's newer model—FICO
-Score 10T—didn't exist yet. So the real modern-versus-modern contest had to wait.
+## The short answer
 
-That data arrived on July 1, 2026. I rebuilt the study with all three scores attached to the same
-Fannie Mae loans, then watched what happened to each mortgage over the next three years.
+**FICO Score 10T wins this test.** It does the best job of moving the loans that later defaulted
+toward the risky end of the list. VantageScore 4.0 finishes second, and Classic FICO finishes
+third.
 
-**In this test, FICO 10T wins.**
+The test is deliberately simple. Give each score the same Fannie Mae loans, sort them from
+riskiest to safest, and follow every loan for three years. A better score should find more future
+defaults near the risky end—and leave fewer of them in an equally large safe portfolio.
 
-A useful credit score should push the loans that later default toward the risky end of the list.
-Gini measures how well it does that: zero is no better than random ordering, and higher is better.
-FICO 10T scores **0.516**, ahead of VantageScore at **0.492** and Classic FICO at **0.477**.
+## How much better is the ranking?
 
-![FICO 10T separates future defaulters best](figures/part2_gini_comparison.png)
+Start with the riskiest 10% under each model: exactly **2,469,707 loans per list**.
 
-That is not an enormous gulf, but it is not a one-off wobble. Split the loans into the 40 quarters
-when Fannie acquired them and 10T finishes first in every single one. All three scores struggle
-more with loans exposed to the early COVID shock, but 10T keeps its lead through that period too.
+- FICO 10T finds **104,879** future defaults, or **36%** of all defaults in the sample.
+- VantageScore finds **99,241**, or **34%**.
+- Classic FICO finds **91,279**, or **32%**.
 
-![FICO 10T leads in every acquisition quarter](figures/part2_gini_by_vintage.png)
+![Share of future defaults found as each model moves down its risk list](figures/part2_default_capture.png)
 
-The borrower split tells the same story. In the original study, VantageScore's advantage over
-Classic FICO came almost entirely from loans with one borrower; on two-borrower loans they tied.
-FICO 10T improves on both of them in both groups.
+That is the central result in plain English. When all three models are allowed to flag the same
+number of loans, 10T puts more of the eventual trouble in the group it calls risky. Because these
+scores are whole numbers, ties at an exact boundary are broken consistently with the loan ID; the
+technical checks in the report handle tied scores directly.
 
-![FICO 10T leads with one borrower or two](figures/part2_borrower_split.png)
+## What if the goal is to keep the safer loans?
 
-The most practical test is what happens when the models disagree. Imagine keeping the best-scoring
-80% of these already-originated loans under each modern score. The two models swap about 1.3
-million loans in each direction. The loans kept only by 10T default **1.56%** of the time; the loans
-kept only by VantageScore default **2.06%** of the time. At the 50% mark it is **0.61% versus
-0.80%**. Across selection rates from 10% to 90%, the 10T-only group defaults less every time.
+Turn the ranking around and keep the safest 80% under each score. Every portfolio now contains
+exactly **19,757,657 loans**.
 
-![Default rate of the loans kept by only one modern score](figures/part2_approval_estuary.png)
+- The 10T portfolio contains **128,122** loans that later default.
+- The VantageScore portfolio contains **134,695**.
+- The Classic FICO portfolio contains **140,395**.
 
-So is FICO 10T *the* best credit score? On the question this dataset can answer, yes: it is the best
-of these three at ranking 36-month default risk for mortgages Fannie Mae actually acquired.
-VantageScore still beats Classic FICO overall, so the first study's case for competition survives;
-the new result simply says the newer FICO model is stronger here.
+So 10T includes **6,573 fewer future defaults than VantageScore** and **12,273 fewer than Classic
+FICO**, without changing the portfolio size.
 
-There is a harder limit around “here.” These are mortgages that were originated and sold to
-Fannie—not applications, denied borrowers, or the full credit market. This study cannot tell us
-who gains access to a mortgage, how a lender would price it, what either model costs, or what would
-happen if lenders changed behavior after adoption. It measures risk ranking, not fairness,
-calibration, or business value. And the only serious stress episode in the window is COVID.
+![Future defaults in equally large portfolios](figures/part2_same_size_portfolios.png)
 
-The answer, then, is clear without being universal: **FICO 10T wins this historical mortgage
-bake-off.** The [extended report](REPORT.md) has the exact sample construction, metrics, robustness
-checks, and limitations. The [gallery](GALLERY.md) walks through every new figure. The
-[original Part 1 study](PART1.md) is preserved exactly as the question looked before 10T data
-arrived.
+## Is that just a cutoff trick?
+
+No. At the 80% portfolio size, 10T and VantageScore agree on most loans but swap **1,302,705** in
+each direction. Among the VantageScore-only loans, **26,631** later default. Among the equally
+large 10T-only group, **20,058** default. The entire 6,573-loan difference comes from the loans on
+which the two models disagree.
+
+![Defaults among equal-size groups where the modern models disagree](figures/part2_exact_swaps.png)
+
+The same swap pattern appears at the 50% portfolio size and across every tested selection point
+from 10% to 90%. In separate ranking checks, 10T also leads in every acquisition quarter and for
+both one- and two-borrower loans.
+
+## What this says—and what it does not
+
+The result is strong but specific: **among these three scores, FICO 10T produced the best
+36-month default ranking for mortgages Fannie Mae acquired from 2013Q2 through 2023Q1.**
+VantageScore still improves on Classic FICO overall, so the original study's case for a credible
+alternative to the legacy score remains intact.
+
+The data show *how* 10T wins: it concentrates more defaults at the risky end and leaves fewer in
+same-size safe portfolios. They cannot reveal *which proprietary ingredient* causes the lead.
+Both modern scores use trended credit data, but their internal model weights are not public.
+
+This is also not a study of mortgage applications. Every loan here was already originated and
+acquired by Fannie Mae. The results do not measure approvals, pricing, fairness, model cost, or
+performance in other credit markets.
+
+For the full sample design, technical metrics, robustness checks, and limitations, see the
+[extended report](REPORT.md). For a quick tour of every chart, open the [gallery](GALLERY.md).

@@ -1,7 +1,7 @@
 """Publication charts for the 2026 three-score follow-up.
 
 Run after ``13_part2_compare.py``. Regenerates the public Part 2 figures in
-``figures/`` and writes the full approval-curve data to ``data/outputs/``.
+``figures/`` and writes their supporting tables to ``data/outputs/``.
 """
 from __future__ import annotations
 
@@ -208,8 +208,8 @@ def matched_swing_chart() -> None:
     _finish(fig, "part2_swing_matched.png")
 
 
-def _analysis_arrays() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    columns = ["vs4_current_method", "fico_10t_current_method", "defaulted"]
+def _analysis_arrays() -> tuple[dict[str, np.ndarray], np.ndarray, np.ndarray]:
+    columns = ["loan_identifier", *C.PART2_SCORES.values(), "defaulted"]
     data = (
         pl.scan_parquet(C.PARQUET / "part2_analysis_table.parquet")
         .filter(
@@ -220,11 +220,8 @@ def _analysis_arrays() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         .select(columns)
         .collect(engine="streaming")
     )
-    return (
-        data["vs4_current_method"].to_numpy(),
-        data["fico_10t_current_method"].to_numpy(),
-        data["defaulted"].to_numpy().astype(bool),
-    )
+    scores = {label: data[column].to_numpy() for label, column in C.PART2_SCORES.items()}
+    return scores, data["loan_identifier"].to_numpy(), data["defaulted"].to_numpy().astype(bool)
 
 
 def approval_estuary(vantage: np.ndarray, ten_t: np.ndarray, default: np.ndarray) -> None:
@@ -334,16 +331,265 @@ def rank_disagreement_heatmap(
     _finish(fig, "part2_rank_disagreement.png")
 
 
+def exact_rank_evidence(
+    scores: dict[str, np.ndarray], loan_ids: np.ndarray, default: np.ndarray
+) -> None:
+    """Build exact-size rankings so score ties cannot change the number of loans compared."""
+    n = len(default)
+    total_defaults = int(default.sum())
+    capture_rows: list[dict] = []
+    decile_rows: list[dict] = []
+    portfolio_rows: list[dict] = []
+    orders: dict[str, np.ndarray] = {}
+
+    for label, score in scores.items():
+        order = np.lexsort((loan_ids, score))  # low score (highest modeled risk) first
+        orders[label] = order
+        ranked_default = default[order]
+        cumulative_defaults = np.cumsum(ranked_default, dtype=np.int64)
+
+        for share in np.arange(0.10, 1.01, 0.10):
+            count = min(round(n * share), n)
+            defaults_found = int(cumulative_defaults[count - 1])
+            capture_rows.append(
+                {
+                    "score": label,
+                    "riskiest_share": float(share),
+                    "loans": count,
+                    "defaults_found": defaults_found,
+                    "share_of_all_defaults": defaults_found / total_defaults,
+                }
+            )
+
+        for decile in range(1, 11):
+            start = round(n * (decile - 1) / 10)
+            stop = round(n * decile / 10)
+            segment = ranked_default[start:stop]
+            decile_rows.append(
+                {
+                    "score": label,
+                    "risk_decile": decile,
+                    "loans": len(segment),
+                    "defaults": int(segment.sum()),
+                    "defaults_per_1000": float(segment.mean() * 1_000),
+                }
+            )
+
+        for keep_share in (0.50, 0.80):
+            count = round(n * keep_share)
+            selected = ranked_default[n - count:]
+            selected_defaults = int(selected.sum())
+            portfolio_rows.append(
+                {
+                    "score": label,
+                    "share_kept": keep_share,
+                    "loans_kept": count,
+                    "defaults_included": selected_defaults,
+                    "defaults_per_100000_loans": selected_defaults / count * 100_000,
+                }
+            )
+
+    capture = pl.DataFrame(capture_rows)
+    deciles = pl.DataFrame(decile_rows)
+    portfolios = pl.DataFrame(portfolio_rows)
+    capture.write_csv(C.OUTPUTS / "part2_default_capture.csv")
+    deciles.write_csv(C.OUTPUTS / "part2_defaults_by_risk_decile.csv")
+    portfolios.write_csv(C.OUTPUTS / "part2_exact_size_portfolios.csv")
+
+    _default_capture_chart(capture)
+    _risk_decile_chart(deciles)
+    _same_size_portfolio_chart(portfolios)
+    _exact_swap_table(orders, default)
+
+
+def _default_capture_chart(data: pl.DataFrame) -> None:
+    ten_t_10 = data.filter(
+        (pl.col("score") == "FICO Score 10T") & (pl.col("riskiest_share") == 0.10)
+    )["share_of_all_defaults"].item()
+    fig, ax = plt.subplots(figsize=(9.2, 5.7))
+    for label in COLORS:
+        sub = data.filter(pl.col("score") == label).sort("riskiest_share")
+        ax.plot(
+            sub["riskiest_share"].to_numpy() * 100,
+            sub["share_of_all_defaults"].to_numpy() * 100,
+            color=COLORS[label],
+            marker="o",
+            linewidth=2.4,
+            markersize=4.5,
+            label=label,
+        )
+    ax.plot([0, 100], [0, 100], color="#9CA3AF", linewidth=1.2, linestyle="--", label="Random order")
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 100)
+    ax.set_xlabel("Share of loans, starting with those each model calls riskiest")
+    ax.set_ylabel("Share of all future defaults found")
+    ax.set_title(
+        f"10T puts {ten_t_10:.0%} of all defaults in its riskiest 10% of loans",
+        loc="left",
+        weight="bold",
+        pad=28,
+    )
+    ax.text(
+        0,
+        1.01,
+        "A better ranking finds more of the eventual defaults sooner",
+        transform=ax.transAxes,
+        color="#4B5563",
+        fontsize=10,
+    )
+    ax.xaxis.set_major_formatter(PercentFormatter())
+    ax.yaxis.set_major_formatter(PercentFormatter())
+    ax.legend(frameon=False, ncol=2)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.grid(alpha=0.18)
+    _finish(fig, "part2_default_capture.png")
+
+
+def _risk_decile_chart(data: pl.DataFrame) -> None:
+    fig, ax = plt.subplots(figsize=(9.5, 5.8))
+    for label in COLORS:
+        sub = data.filter(pl.col("score") == label).sort("risk_decile")
+        ax.plot(
+            sub["risk_decile"],
+            sub["defaults_per_1000"],
+            color=COLORS[label],
+            marker="o",
+            linewidth=2.4,
+            markersize=5,
+            label=label,
+        )
+    ax.set_xticks(range(1, 11), ["Riskiest\n10%"] + [str(i) for i in range(2, 10)] + ["Safest\n10%"])
+    ax.set_xlabel("Ten equal-size groups under each score")
+    ax.set_ylabel("Loans that defaulted per 1,000")
+    ax.set_title("10T separates the risky end from the safe end most clearly", loc="left", weight="bold", pad=28)
+    ax.text(
+        0,
+        1.01,
+        "Each point represents about 2.47 million loans",
+        transform=ax.transAxes,
+        color="#4B5563",
+        fontsize=10,
+    )
+    ax.legend(frameon=False)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.grid(alpha=0.18)
+    _finish(fig, "part2_defaults_by_risk_decile.png")
+
+
+def _same_size_portfolio_chart(data: pl.DataFrame) -> None:
+    x = np.arange(2)
+    width = 0.24
+    fig, ax = plt.subplots(figsize=(9.2, 5.7))
+    for index, label in enumerate(COLORS):
+        sub = data.filter(pl.col("score") == label).sort("share_kept")
+        values = sub["defaults_included"].to_numpy()
+        bars = ax.bar(x + (index - 1) * width, values, width, color=COLORS[label], label=label)
+        ax.bar_label(bars, labels=[f"{value:,}" for value in values], padding=3, fontsize=9)
+    loan_counts = (
+        data.filter(pl.col("score") == "Classic FICO")
+        .sort("share_kept")["loans_kept"]
+        .to_list()
+    )
+    ax.set_xticks(
+        x,
+        [
+            f"Keep safest 50%\n{loan_counts[0]:,} loans each",
+            f"Keep safest 80%\n{loan_counts[1]:,} loans each",
+        ],
+    )
+    ax.set_ylabel("Loans that later defaulted")
+    ax.set_title("At the same portfolio size, 10T includes fewer future defaults", loc="left", weight="bold", pad=28)
+    ax.text(
+        0,
+        1.01,
+        "Within each portfolio size, every bar contains exactly the same number of loans",
+        transform=ax.transAxes,
+        color="#4B5563",
+        fontsize=10,
+    )
+    ax.legend(frameon=False, ncol=3)
+    ax.spines[["top", "right", "left"]].set_visible(False)
+    ax.tick_params(axis="y", length=0)
+    ax.grid(axis="y", alpha=0.18)
+    _finish(fig, "part2_same_size_portfolios.png")
+
+
+def _exact_swap_table(orders: dict[str, np.ndarray], default: np.ndarray) -> None:
+    n = len(default)
+    rows = []
+    for keep_share in (0.50, 0.80):
+        count = round(n * keep_share)
+        vantage_selected = np.zeros(n, dtype=bool)
+        ten_t_selected = np.zeros(n, dtype=bool)
+        vantage_selected[orders["VantageScore 4.0"][n - count:]] = True
+        ten_t_selected[orders["FICO Score 10T"][n - count:]] = True
+        vantage_only = vantage_selected & ~ten_t_selected
+        ten_t_only = ten_t_selected & ~vantage_selected
+        rows.append(
+            {
+                "share_kept": keep_share,
+                "loans_swapped_each_way": int(vantage_only.sum()),
+                "vantage_only_defaults": int(default[vantage_only].sum()),
+                "fico_10t_only_defaults": int(default[ten_t_only].sum()),
+                "fewer_defaults_in_10t_only_group": int(
+                    default[vantage_only].sum() - default[ten_t_only].sum()
+                ),
+            }
+        )
+    data = pl.DataFrame(rows)
+    data.write_csv(C.OUTPUTS / "part2_exact_size_swaps.csv")
+
+    x = np.arange(2)
+    width = 0.34
+    fig, ax = plt.subplots(figsize=(9.2, 5.7))
+    for offset, column, label, color in [
+        (-width / 2, "vantage_only_defaults", "VantageScore-only loans", COLORS["VantageScore 4.0"]),
+        (width / 2, "fico_10t_only_defaults", "FICO 10T-only loans", COLORS["FICO Score 10T"]),
+    ]:
+        values = data[column].to_numpy()
+        bars = ax.bar(x + offset, values, width, color=color, label=label)
+        ax.bar_label(bars, labels=[f"{value:,}" for value in values], padding=3, fontsize=10)
+    swap_counts = data["loans_swapped_each_way"].to_list()
+    ax.set_xticks(
+        x,
+        [
+            f"Keep safest 50%\n{swap_counts[0]:,} loans swap each way",
+            f"Keep safest 80%\n{swap_counts[1]:,} loans swap each way",
+        ],
+    )
+    ax.set_ylabel("Loans that later defaulted")
+    ax.set_title(
+        "When the models swap the same number of loans, 10T's group defaults less",
+        loc="left",
+        weight="bold",
+        pad=28,
+    )
+    ax.text(
+        0,
+        1.01,
+        "Compare only the loans selected by one modern score but not the other",
+        transform=ax.transAxes,
+        color="#4B5563",
+        fontsize=10,
+    )
+    ax.legend(frameon=False)
+    ax.spines[["top", "right", "left"]].set_visible(False)
+    ax.tick_params(axis="y", length=0)
+    ax.grid(axis="y", alpha=0.18)
+    _finish(fig, "part2_exact_swaps.png")
+
+
 def main() -> None:
     headline_chart()
     vintage_chart()
     vintage_edge_chart()
     borrower_chart()
     matched_swing_chart()
-    vantage, ten_t, default = _analysis_arrays()
-    approval_estuary(vantage, ten_t, default)
-    rank_disagreement_heatmap(vantage, ten_t, default)
-    print("Wrote seven Part 2 charts to figures/ and approval-curve data to data/outputs/")
+    scores, loan_ids, default = _analysis_arrays()
+    approval_estuary(scores["VantageScore 4.0"], scores["FICO Score 10T"], default)
+    rank_disagreement_heatmap(scores["VantageScore 4.0"], scores["FICO Score 10T"], default)
+    exact_rank_evidence(scores, loan_ids, default)
+    print("Wrote eleven Part 2 charts to figures/ and supporting tables to data/outputs/")
 
 
 if __name__ == "__main__":

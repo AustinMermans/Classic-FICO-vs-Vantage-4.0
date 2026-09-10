@@ -1,222 +1,257 @@
 # Classic FICO vs. VantageScore 4.0 vs. FICO Score 10T
 
-*A loan-level default-prediction bake-off on 24.7 million Fannie Mae mortgages*
+*A loan-level comparison on 24.7 million Fannie Mae mortgages*
 
-> Start with the [plain-English summary](README.md). This report gives the full design, exact
-> results, and limitations. The [figure gallery](GALLERY.md) has a guided tour of every chart.
+> The [README](README.md) gives the quick answer. This report covers the design, exact results,
+> technical checks, and limits. The [gallery](GALLERY.md) explains every figure.
 
 ## Abstract
 
-- Fannie Mae's July 2026 historical score release makes a modern-model comparison possible: FICO
-  Score 10T and VantageScore 4.0, constructed from archived bureau data for the same loans.
-- The headline sample contains **24,697,071** Fannie-acquired mortgages from 2013Q2–2023Q1 with
-  all three scores, no more than two borrowers, and a resolved 36-month outcome.
-- **FICO 10T ranks default risk best:** Gini **0.5163**, versus **0.4922** for VantageScore 4.0 and
-  **0.4774** for Classic FICO. The 10T edge is +241 Gini bp over VantageScore and +389 bp over
-  Classic.
-- The result is broad. 10T leads both alternatives in all **40 acquisition quarters** and in both
-  the one- and two-borrower samples.
-- In retrospective matched-selection exercises, the loans kept only by 10T default less than the
-  loans kept only by VantageScore at every tested portfolio share from 10% through 90%.
-- This is evidence about default ranking among loans Fannie acquired—not mortgage access, pricing,
-  denied applicants, fairness, model cost, or performance across the full consumer-credit market.
+Fannie Mae's 2026 historical score release makes a direct three-way test possible. This study
+attaches Classic FICO, VantageScore 4.0, and FICO Score 10T to the same **24,697,071** mortgages,
+then checks which score best ranks default during the following 36 months.
 
-## 1. Why run the test again?
+The result is consistent across several views:
 
-Part 1 had an unavoidable missing contestant. The public data included VantageScore 4.0 and the
-legacy Classic FICO score disclosed with each loan, but not FICO's newer 10T model. VantageScore
-edged Classic FICO overall, with important differences across vintages and borrower counts. That
-answered whether VantageScore could compete with the old score; it did not answer which modern
-model was stronger.
+- In each model's riskiest 10%—exactly 2,469,707 loans—10T finds **104,879** future defaults,
+  versus **99,241** for VantageScore and **91,279** for Classic FICO.
+- In equally large portfolios containing the safest 80% of loans, the 10T portfolio includes
+  **128,122** future defaults, versus **134,695** under VantageScore and **140,395** under Classic.
+- At that 80% mark, VantageScore and 10T swap 1,302,705 loans in each direction. The 10T-only
+  group contains **6,573 fewer** future defaults.
+- Standard ranking metrics agree: 10T has the highest Gini, AUC, and KS. It also leads in all 40
+  acquisition-quarter comparisons and in both borrower-count groups.
 
-On July 1, 2026, Fannie Mae published historical FICO 10T scores and refreshed VantageScore 4.0
-scores. The files use the same loan keys and offer the same loan-level aggregation methods. The
-question can now be asked cleanly: on the same mortgages, followed for the same length of time,
-which score puts future defaulters closest to the risky end of the ranking?
+The conclusion is narrow by design: **FICO Score 10T ranks 36-month default risk best among these
+three scores for the Fannie-acquired mortgages studied.** This is not a test of approvals,
+pricing, fairness, model cost, or the full consumer-credit market.
 
-## 2. Data and sample
+## 1. The question
+
+Part 1 compared VantageScore 4.0 with the legacy Classic FICO score found in Fannie Mae's loan
+data. VantageScore finished ahead overall, but the historical data needed to include FICO's newer
+10T model did not yet exist.
+
+Fannie Mae released historical FICO Score 10T data and refreshed VantageScore 4.0 data on July 1,
+2026. The new files allow the more useful comparison: on the same mortgages, observed for the
+same length of time, which score puts future defaults closest to the risky end of its ranking?
+
+## 2. Data and design
+
+### 2.1 Sample
 
 The loan and outcome data come from Fannie Mae's Single-Family Historical Loan Performance
-Dataset. The two modern-score files each contain **27,513,197** loans acquired from 2013Q2 through
-2025Q3. They join to the performance data on `loan_identifier + acquisition_quarter`.
-
-The headline retains Part 1's mature window, 2013Q2–2023Q1. Later acquisitions cannot yet supply a
-complete 36-month outcome and are not mixed into the main result.
+Dataset. The modern-score files join to that dataset on `loan_identifier + acquisition_quarter`.
+The study keeps the mature 2013Q2–2023Q1 acquisition window so every included loan can have a
+resolved 36-month outcome.
 
 | Sample step | Loans |
 |---|---:|
 | Loan-performance panel, 2013Q2–2023Q1 | 25,087,678 |
 | Valid VantageScore 4.0 current-method score | 25,081,806 |
 | Valid FICO 10T current-method score | 25,071,037 |
-| All three scores present, before outcome/borrower filters | 25,070,283 |
+| All three scores present, before outcome and borrower filters | 25,070,283 |
 | Final resolved outcome, no more than two borrowers | **24,697,071** |
 
-## 3. Methods
+The final sample contains **287,830 defaults**.
 
-### 3.1 Outcome
+### 2.2 Outcome
 
-**Default within 36 months** means the loan ever reaches 180 days delinquent or reports a
-credit-event zero-balance code (`02`, `03`, `09`, or `15`) during the window. Voluntary prepayment
-is retained as a known non-default. An active loan without enough observed history is censored and
-excluded rather than labeled good.
+**Default within 36 months** means that a loan reaches 180 days delinquent or reports a
+credit-event zero-balance code (`02`, `03`, `09`, or `15`) during the window. A voluntary
+prepayment remains a known non-default. An active loan without enough observed history is
+censored and excluded rather than labeled good.
 
-### 3.2 Scores
+### 2.3 Scores
 
 - **Classic FICO:** the representative origination score in the loan-performance disclosure,
-  constructed as the lower available borrower/co-borrower score.
+  using the lower available borrower/co-borrower score.
 - **VantageScore 4.0:** `vs4_current_method`.
 - **FICO Score 10T:** `fico_10t_current_method`.
 
-For the two modern scores, Fannie's current method chooses the middle of three or lower of two
-bureau scores for each borrower, then the lowest borrower score on the loan. Loans with more than
-two borrowers are excluded because the public Classic FICO fields cover only borrower and
-co-borrower; leaving them in would create an aggregation mismatch.
+For the modern scores, Fannie's current method takes the middle of three or lower of two bureau
+scores for each borrower, then the lowest borrower score on the loan. Loans with more than two
+borrowers are excluded because the public Classic FICO fields cover only a borrower and
+co-borrower.
 
-Fannie documents **9999** as “FICO 10T could not be calculated.” The loader converts that sentinel,
-and any value outside the documented 300–850 range, to missing before joins or metrics. There are
+Fannie uses **9999** to mean that FICO 10T could not be calculated. The loader converts that value,
+and any score outside the documented 300–850 range, to missing before the comparison. There are
 14,029 such current-method records in the full 10T file; 5,527 would otherwise enter the headline
-sample. Treating 9999 as a very high score would reverse its meaning and bias the comparison.
+sample.
 
-### 3.3 Metrics
+### 2.4 Plain-English tests
 
-The primary metric is **Gini**, which summarizes how well a score ranks defaulters below
-non-defaulters: 0 is random ranking and 1 is perfect ranking. AUC reports the same ranking statistic
-on a different scale (`Gini = 2 × AUC − 1`), so it is not an independent confirmation. KS is the
-largest separation between the score distributions of defaulters and non-defaulters.
+Each score ranks the same loans from riskiest to safest. The analysis then asks:
 
-The analysis reports pooled AUC/Gini/KS, Gini by acquisition quarter, loan- and default-weighted
-within-quarter results, borrower-count splits, rank correlations, and retrospective swing-loan
-comparisons at matched nominal portfolio shares. Integer score ties make the realized shares
-slightly different around a cutoff.
+1. How many eventual defaults appear in the riskiest part of the list?
+2. How many eventual defaults remain when an equally large safest portfolio is kept?
+3. When 10T and VantageScore disagree, which model's equal-size group performs better?
 
-## 4. Results
+Integer scores create ties. Exact-size comparisons break ties deterministically with the loan
+identifier so every model contributes precisely the same number of loans. The standard metrics
+later in the report handle ties directly and provide a separate check on the result.
 
-### 4.1 Overall: 10T wins
+## 3. Results readers can see directly
 
-| Score | Loans | Defaults | AUC | Gini | KS | Gini vs. Classic |
-|---|---:|---:|---:|---:|---:|---:|
-| Classic FICO | 24,697,071 | 287,830 | 0.7387 | 0.4774 | 0.3628 | — |
-| VantageScore 4.0 | 24,697,071 | 287,830 | 0.7461 | 0.4922 | 0.3675 | +148 bp |
-| **FICO Score 10T** | **24,697,071** | **287,830** | **0.7582** | **0.5163** | **0.3897** | **+389 bp** |
+### 3.1 The riskiest 10% contains more of the future defaults under 10T
+
+| Score | Loans in riskiest 10% | Future defaults found | Share of all defaults |
+|---|---:|---:|---:|
+| Classic FICO | 2,469,707 | 91,279 | 31.7% |
+| VantageScore 4.0 | 2,469,707 | 99,241 | 34.5% |
+| **FICO Score 10T** | **2,469,707** | **104,879** | **36.4%** |
+
+![Share of defaults found while moving down each risk list](figures/part2_default_capture.png)
+
+At the same 10% capacity, 10T finds 5,638 more defaults than VantageScore and 13,600 more than
+Classic FICO. The lead continues beyond one cutoff: within the riskiest 20%, 10T finds 55.5% of
+all defaults, versus 53.2% for VantageScore and 51.2% for Classic.
+
+### 3.2 An equally large safe portfolio contains fewer future defaults under 10T
+
+| Portfolio | Loans kept under each score | Classic defaults | VantageScore defaults | 10T defaults |
+|---|---:|---:|---:|---:|
+| Safest 50% | 12,348,536 | 48,410 | 47,765 | **44,498** |
+| Safest 80% | 19,757,657 | 140,395 | 134,695 | **128,122** |
+
+![Future defaults in equally large portfolios](figures/part2_same_size_portfolios.png)
+
+At the 80% size, the 10T portfolio includes 6,573 fewer future defaults than the VantageScore
+portfolio and 12,273 fewer than the Classic portfolio. Portfolio size is held fixed; only the
+ranking changes.
+
+### 3.3 The difference comes from the loans on which the models disagree
+
+| Portfolio | Loans swapped each way | Defaults in VantageScore-only group | Defaults in 10T-only group | Fewer in 10T group |
+|---|---:|---:|---:|---:|
+| Safest 50% | 1,843,179 | 14,575 | **11,308** | **3,267** |
+| Safest 80% | 1,302,705 | 26,631 | **20,058** | **6,573** |
+
+![Future defaults in equal-size groups selected by only one modern model](figures/part2_exact_swaps.png)
+
+This is an exact comparison. At the 80% point, the two portfolios share the same core and exchange
+1,302,705 loans in each direction. The loans unique to 10T default less often, producing the
+entire difference between the two same-size portfolios.
+
+### 3.4 The separation is visible from the risky end to the safe end
+
+Divide each ranking into ten equally large groups. In the riskiest group, 10T records **42.5
+defaults per 1,000 loans**, compared with 40.2 under VantageScore and 37.0 under Classic. In the
+safest group, 10T falls to **1.8 per 1,000**, compared with 1.9 and 2.1.
+
+![Defaults per 1,000 loans in equal-size risk groups](figures/part2_defaults_by_risk_decile.png)
+
+A useful ranking creates this spread: more of the bad outcomes at the risky end and fewer at the
+safe end. This chart shows why the portfolio counts above move in 10T's favor.
+
+## 4. Technical and robustness checks
+
+### 4.1 Standard ranking metrics agree
+
+| Score | Loans | Defaults | AUC | Gini | KS |
+|---|---:|---:|---:|---:|---:|
+| Classic FICO | 24,697,071 | 287,830 | 0.7387 | 0.4774 | 0.3628 |
+| VantageScore 4.0 | 24,697,071 | 287,830 | 0.7461 | 0.4922 | 0.3675 |
+| **FICO Score 10T** | **24,697,071** | **287,830** | **0.7582** | **0.5163** | **0.3897** |
 
 ![Overall Gini comparison](figures/part2_gini_comparison.png)
 
-The pooled gap between 10T and VantageScore is **241 Gini bp**. That is a modest improvement in
-absolute terms, but it is larger than VantageScore's 148 bp advantage over Classic FICO and is
-remarkably consistent in the splits below.
+Gini, AUC, and KS all summarize how clearly a score separates defaulters from non-defaulters.
+They are useful compact checks, but they are not needed to interpret the loan and default counts
+in Section 3. AUC and Gini are the same ranking statistic on different scales, so they should not
+be read as two independent tests.
 
-### 4.2 Every acquisition quarter points the same way
+### 4.2 The result holds across time
 
-FICO 10T leads VantageScore in all 40 quarters. Its quarterly edge ranges from **101 to 415 bp**
-and averages **244 bp** without weighting, **231 bp** weighted by loans, and **265 bp** weighted by
-defaults. It also leads Classic FICO in all 40 quarters. VantageScore leads Classic in 35 of 40.
+FICO 10T leads VantageScore in all **40 acquisition quarters**. Its quarterly Gini advantage
+ranges from 101 to 415 basis points. It also leads Classic FICO in all 40 quarters, while
+VantageScore leads Classic in 35 of 40.
 
-![Gini by acquisition quarter](figures/part2_gini_by_vintage.png)
+![Ranking performance by acquisition quarter](figures/part2_gini_by_vintage.png)
 
-The fall in all three lines for 2017Q4–2020Q1 acquisitions is the same COVID-era pattern identified
-in Part 1: defaults became harder to rank because a common shock reached farther into the score
-distribution. Unlike VantageScore's Part 1 edge over Classic, 10T's advantage does not disappear
-in those cohorts. Still, COVID is one unusual episode, not proof about every future recession.
+All three lines fall for loans exposed to the early COVID shock. Defaults became harder to rank,
+but the order of the models did not change. COVID is still one unusual episode, not proof about
+every future downturn.
 
-The companion chart removes the levels and plots only 10T's lead. Every point above zero means 10T
-ranked that quarter better.
+![10T's technical edge by acquisition quarter](figures/part2_gini_edge_by_vintage.png)
 
-![10T Gini edge by quarter](figures/part2_gini_edge_by_vintage.png)
+### 4.3 The result holds for one- and two-borrower loans
 
-### 4.3 One borrower and two borrowers
-
-| Borrowers | Loans | Defaults | Classic FICO | VantageScore 4.0 | FICO 10T |
+| Borrowers | Loans | Defaults | Classic FICO Gini | VantageScore Gini | 10T Gini |
 |---:|---:|---:|---:|---:|---:|
 | 1 | 12,988,302 | 198,595 | 0.4438 | 0.4635 | **0.4923** |
 | 2 | 11,708,769 | 89,235 | 0.5602 | 0.5604 | **0.5823** |
 
-![Gini by borrower count](figures/part2_borrower_split.png)
+![Ranking performance by borrower count](figures/part2_borrower_split.png)
 
-VantageScore and Classic remain essentially tied on two-borrower loans, reproducing Part 1. FICO
-10T leads VantageScore by **288 bp** on one-borrower loans and **219 bp** on two-borrower loans. The
-new model's gain is therefore not confined to the place where VantageScore already looked strong.
+The VantageScore–Classic tie on two-borrower loans from Part 1 remains. FICO 10T finishes ahead
+in both groups, so its overall result is not carried by only one household structure.
 
-### 4.4 The loans where 10T and VantageScore disagree
+### 4.4 The modern models agree often, but not always
 
-The models have a Spearman rank correlation of **0.852**: they usually agree, but not enough to be
-interchangeable. A matched-selection exercise makes the disagreements concrete. Rank these same
-loans under each model, keep a nominal top share, and compare only the loans kept by one score but
-not the other.
-
-| Nominal share kept | VantageScore-only default rate | 10T-only default rate | Relative reduction |
-|---:|---:|---:|---:|
-| 50% | 0.80% | **0.61%** | 23.7% |
-| 80% | 2.06% | **1.56%** | 24.5% |
-
-![Modern-model swing loans](figures/part2_swing_matched.png)
-
-At the 80% point, each score keeps about 1.3 million loans the other leaves out. The 50% point
-swaps about 1.8–1.9 million in each direction. Extending the calculation from 10% through 90%, the
-10T-only group has the lower observed default rate at every tested cutoff.
-
-![Swing loans across the selection curve](figures/part2_approval_estuary.png)
-
-This is a retrospective portfolio comparison, not an approval experiment. Everyone in the sample
-already received a mortgage that Fannie acquired. The exercise says which ranking chose safer
-loans at equal-ish volume; it says nothing directly about access to credit.
-
-### 4.5 What the disagreement map adds
-
-The rank heatmap puts each loan into a VantageScore decile and a FICO 10T decile. Risk generally
-falls from the lower-left (both models say risky) toward the upper-right (both say safe). The
-off-diagonal cells are the disagreements. Their changing color shows that each model contains
-information the other does not fully reproduce, even though 10T is the stronger ranking overall.
+VantageScore and 10T have a Spearman rank correlation of **0.852**. Their disagreement map shows
+where one model places a loan higher or lower than the other and the observed default rate in each
+cell.
 
 ![Default rate by modern-score rank groups](figures/part2_rank_disagreement.png)
 
-Cells with fewer than 10,000 loans are hidden so a tiny extreme-disagreement group cannot dominate
-the color scale. The full cell counts and rates are written to
-`data/outputs/part2_rank_disagreement.csv` when the chart script runs.
+Cells with fewer than 10,000 loans are hidden so tiny groups do not control the color scale. The
+full table is written to `data/outputs/part2_rank_disagreement.csv`.
+
+The earlier tie-inclusive selection exercise reaches the same conclusion across every nominal
+portfolio share from 10% through 90%: the loans selected only by 10T default less often than the
+loans selected only by VantageScore.
+
+![Default rate of the modern-model swing loans across selection sizes](figures/part2_approval_estuary.png)
 
 ## 5. Interpretation
 
-The cleanest statement is also the narrowest: **FICO Score 10T is the strongest of these three
-scores at ranking 36-month default risk among the Fannie-acquired mortgages studied.** The pooled
-metrics, every acquisition quarter, both borrower-count groups, and the swing-loan tests all point
-the same way.
+FICO 10T's advantage has a concrete shape. It moves more eventual defaults toward the risky end
+and keeps fewer of them in same-size safe portfolios. That pattern appears in the full sample,
+through time, and in both borrower-count groups.
 
-That does not erase Part 1. VantageScore 4.0 still ranks better than Classic FICO overall, which
-supports the idea that a non-FICO model can be a credible competitor to the legacy standard. Part
-2 changes the winner, not the broader argument that model competition is technically possible.
+The study cannot identify the proprietary design choice responsible for the difference. Both
+modern scores use trended credit information, but the public files provide scores rather than the
+models' internal weights. The evidence supports *which model ranked these loans better* and
+*where the rankings differ*; it does not establish a causal explanation for why 10T wins.
 
-## 6. Limitations / ways this could mislead
+Part 1's broader finding also remains: VantageScore 4.0 beats Classic FICO overall. The new data
+change the winner of the modern comparison, not the evidence that competition with the legacy
+score is technically credible.
 
-- **Selected loans, not applicants.** The dataset begins after origination and Fannie acquisition.
-  It cannot measure denials, approval expansion, pricing, lender behavior, or adverse selection.
-- **Ranking, not calibration.** A higher Gini does not mean the score number itself is a better
-  probability of default. The raw numerical scales are not interchangeable.
-- **Modern-versus-Classic timing.** The two modern scores were reconstructed from archived bureau
-  data using an aligned process. Classic FICO is the disclosed origination score. Differences in
-  report timing or credit-file contents make either modern-versus-Classic comparison less clean
-  than 10T versus VantageScore.
-- **One outcome.** Results use a 36-month binary default label with prepayment treated as a known
-  non-default, not a competing-risks model. Other horizons or definitions can change magnitudes.
-- **One mortgage channel.** These are Fannie Mae loans, not Freddie Mac, FHA/VA, portfolio loans,
-  auto loans, credit cards, or the full consumer population.
-- **One severe shock.** COVID is the only major stress episode in the observed window, and
-  delinquency marks may reflect forbearance mechanics as well as credit deterioration.
-- **No causal adoption effect.** The scores are evaluated after the fact. Lenders did not choose,
-  price, or manage these loans using the reconstructed 10T and VantageScore values.
+## 6. Limits
+
+- **These are loans, not applicants.** Every observation was already originated and acquired by
+  Fannie Mae. The study cannot measure denials, access to credit, pricing, or lender behavior.
+- **Ranking is not calibration.** Better ordering does not mean a raw score is a probability of
+  default. The numerical score scales are not interchangeable.
+- **The modern-versus-modern comparison is the cleanest.** FICO 10T and VantageScore were
+  reconstructed from archived bureau data using aligned methods. Classic FICO is the disclosed
+  origination score, so timing or credit-file contents may differ.
+- **One outcome is tested.** The study uses a 36-month binary default definition and treats
+  voluntary prepayment as a known non-default. Other horizons or definitions may change the size
+  of the gaps.
+- **One mortgage channel is tested.** Fannie Mae loans do not represent Freddie Mac, FHA/VA,
+  portfolio mortgages, auto loans, credit cards, or the full consumer population.
+- **No causal adoption effect is measured.** Lenders did not choose, price, or manage these loans
+  with the reconstructed modern scores.
+- **Cost and fairness are outside the test.** A model can rank defaults better without being the
+  better operational, commercial, or policy choice.
 
 ## 7. Reproducing the analysis
 
 The full score files are free but require Fannie Mae registration and acceptance of its terms.
-Download the FICO Score 10T and refreshed VantageScore 4.0 files for the Historical Loan
-Performance Dataset from Fannie's [Historical Credit Score Files](https://historicalcreditscores.fanniemae.com/).
+Download the Historical Loan Performance files for FICO Score 10T and refreshed VantageScore 4.0
+from Fannie Mae's [Historical Credit Score Files](https://historicalcreditscores.fanniemae.com/).
 
 ```bash
 python3 -m venv .venv
 ./.venv/bin/pip install -r requirements.txt
 
-# Build/resume the 36-month loan outcome table from Performance_All.zip.
+# Build or resume the 36-month loan outcome table from Performance_All.zip.
 ./.venv/bin/python run_full.py --labels-only
 
-# Load the two registered score files (ZIP or extracted TXT/CSV).
+# Load the registered score files (ZIP or extracted TXT/CSV).
 ./.venv/bin/python 11_part2_load.py \
   --fico10t ~/Downloads/FICO10T_HistoricalScores_LoanPerformance_25.zip \
   --vs4 ~/Downloads/VantageScore4_HistoricalScores_LoanPerformance_25.zip
@@ -227,8 +262,15 @@ python3 -m venv .venv
 ```
 
 `config.py` holds the analysis parameters. `gse/` contains the tested join, label, score-loading,
-and metric code. Raw files, Parquet intermediates, and reproducible CSV outputs live under the
-git-ignored `data/` directory; publication figures are regenerated into `figures/`.
+and metric code. Raw files, Parquet intermediates, and reproducible CSV outputs live in the
+git-ignored `data/` directory; the chart script regenerates the public figures in `figures/`.
+
+Key plain-language outputs are:
+
+- `data/outputs/part2_default_capture.csv`
+- `data/outputs/part2_defaults_by_risk_decile.csv`
+- `data/outputs/part2_exact_size_portfolios.csv`
+- `data/outputs/part2_exact_size_swaps.csv`
 
 ## References
 
